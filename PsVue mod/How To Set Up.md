@@ -1,0 +1,1 @@
+Copy all files, to usb or keep on pc, use ftp OR ps4 file explorer. then go to mnt/sandbox/CUSA00960_000/download0 and paste all files in there, feel free to edit files if you want. 
