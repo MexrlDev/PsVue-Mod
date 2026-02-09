@@ -57,3 +57,13 @@ Special thanks to everyone who contributed research, reverse engineering, toolin
 This project is just made for fun by me but grew fast
 
 ---
+
+---
+
+# Controls
+
+same as normal vue BUT with file explorer. when viewing JS to go down or up gotta use R3-L3 to move up or doen the script.. 
+
+to go back from file explorer you have to use L2 ORRR the box on top under te search bar its small press it with X. and analog can be used in PayLoad Menu for fun to make the dot glow.
+
+---
