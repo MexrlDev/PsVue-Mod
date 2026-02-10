@@ -19,7 +19,7 @@
 
 This project is based on **Vue After Free v1.2** by Vuemony.
 
-* 🔗 Original release: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.2)
+* 🔗 Original release: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.3)
 
 All credit for the core exploit logic, research, and foundation goes to the original PsVue / Vue After Free contributors.
 
