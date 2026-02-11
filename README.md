@@ -49,6 +49,7 @@ Special thanks to everyone who contributed research, reverse engineering, toolin
 * **Lua Loader Project** — Foundation for remote Lua loading
 * **Cryptogenic** — Reference for CVE‑2018‑4441
 * **rebelle3** — Reference for CVE‑2017‑7117
+* **SiSTRo** — GoldHen
 
 ---
 
