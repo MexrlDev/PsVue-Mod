@@ -1,4 +1,5 @@
-// config_ui-final-updated.js
+// config_ui-final-updated-fixed.js
+
 if (typeof libc_addr === 'undefined') {
   include('userland.js');
 }
@@ -64,11 +65,30 @@ if (typeof lang === 'undefined') {
   new Style({ name: 'title', color: 'white', size: 32 });
   new Style({ name: 'small', color: 'white', size: 18 });
 
-  if (typeof CONFIG !== 'undefined' && CONFIG.music) {
-    var audio = new jsmaf.AudioClip();
-    audio.volume = 0.5;
-    audio.open('file://../download0/sfx/bgm.wav');
+  // audio handler (create/close dynamically when music setting changes)
+  var audio = null;
+  function startBackgroundAudio() {
+    try {
+      if (!audio) {
+        audio = new jsmaf.AudioClip();
+        audio.volume = 0.5;
+        audio.open('file://../download0/sfx/bgm.wav');
+      } else {
+        try { if (typeof audio.play === 'function') audio.play(); } catch (e) {}
+      }
+    } catch (e) { log('Audio start error: ' + e.message); }
   }
+  function stopBackgroundAudio() {
+    try {
+      if (audio) {
+        try { if (typeof audio.close === 'function') audio.close(); } catch (e) {}
+        try { if (typeof audio.stop === 'function') audio.stop(); } catch (e) {}
+        audio = null;
+      }
+    } catch (e) { log('Audio stop error: ' + e.message); }
+  }
+
+  // (If a pre-existing CONFIG object indicates music on, create audio later after loadConfig; keep original guard removed)
 
   // background (preserved from original)
   var background = new Image({
@@ -840,6 +860,12 @@ if (typeof lang === 'undefined') {
         log(key + ' = ' + jbBehaviorLabels[currentConfig.jb_behavior]);
       } else {
         currentConfig[key] = !currentConfig[key];
+
+        // if music changed, start/stop audio accordingly
+        if (key === 'music') {
+          if (currentConfig.music) startBackgroundAudio(); else stopBackgroundAudio();
+        }
+
         // mutual exclusivity rules from original
         if (key === 'autolapse' && currentConfig.autolapse === true) {
           currentConfig.autopoop = false;
@@ -857,6 +883,8 @@ if (typeof lang === 'undefined') {
         log(key + ' = ' + currentConfig[key]);
       }
       updateValueText(index);
+      // persist changes
+      saveConfig();
     }
   }
 
@@ -902,26 +930,102 @@ if (typeof lang === 'undefined') {
     });
   }
 
-  // key handling
+  // save/load config (adapted)
+  function saveConfig() {
+    if (!configLoaded) {
+      log('Config not loaded yet, skipping save');
+      return;
+    }
+    var configContent = 'const CONFIG = {\n';
+    configContent += '    autolapse: ' + currentConfig.autolapse + ',\n';
+    configContent += '    autopoop: ' + currentConfig.autopoop + ',\n';
+    configContent += '    autoclose: ' + currentConfig.autoclose + ',\n';
+    configContent += '    music: ' + currentConfig.music + ',\n';
+    configContent += '    jb_behavior: ' + currentConfig.jb_behavior + '\n';
+    configContent += '};\n\n';
+    configContent += 'const payloads = [ //to be ran after jailbroken\n';
+    for (var i = 0; i < userPayloads.length; i++) {
+      configContent += '    "' + userPayloads[i] + '"';
+      if (i < userPayloads.length - 1) configContent += ',';
+      configContent += '\n';
+    }
+    configContent += '];\n';
+    fs.write('config.js', configContent, function (err) {
+      if (err) {
+        log('ERROR: Failed to save config: ' + err.message);
+      } else {
+        log('Config saved successfully');
+      }
+    });
+  }
+
+  function loadConfig() {
+    fs.read('config.js', function (err, data) {
+      if (err) {
+        log('ERROR: Failed to read config: ' + (err && err.message ? err.message : err));
+        // allow interface to still function; mark loaded so user can save defaults later
+        configLoaded = true;
+        // if default says music true, start audio
+        if (currentConfig.music) startBackgroundAudio();
+        return;
+      }
+      try {
+        eval(data || ''); // eslint-disable-line no-eval
+        if (typeof CONFIG !== 'undefined') {
+          currentConfig.autolapse = CONFIG.autolapse || false;
+          currentConfig.autopoop = CONFIG.autopoop || false;
+          currentConfig.autoclose = CONFIG.autoclose || false;
+          currentConfig.music = (typeof CONFIG.music === 'undefined') ? true : CONFIG.music;
+          currentConfig.jb_behavior = CONFIG.jb_behavior || 0;
+
+          // Preserve user's payloads
+          if (typeof payloads !== 'undefined' && Array.isArray(payloads)) {
+            userPayloads = payloads.slice();
+          }
+          for (var idx = 0; idx < configOptions.length; idx++) {
+            updateValueText(idx);
+          }
+          configLoaded = true;
+          log('Config loaded successfully');
+          // start audio if enabled
+          if (currentConfig.music) startBackgroundAudio();
+        } else {
+          configLoaded = true;
+          if (currentConfig.music) startBackgroundAudio();
+        }
+      } catch (e) {
+        log('ERROR: Failed to parse config: ' + e.message);
+        configLoaded = true; // Allow saving even on error
+        if (currentConfig.music) startBackgroundAudio();
+      }
+    });
+  }
+
+  // key handling (restored extra mappings)
   jsmaf.onKeyDown = function (keyCode) {
-    if (keyCode === 6) {
+    // next: key 6 or 5
+    if (keyCode === 6 || keyCode === 5) {
       currentButton = (currentButton + 1) % buttons.length;
       updateHighlight();
-    } else if (keyCode === 4) {
+    } else if (keyCode === 4 || keyCode === 7) {
+      // prev: key 4 or 7
       currentButton = (currentButton - 1 + buttons.length) % buttons.length;
       updateHighlight();
     } else if (keyCode === 14) {
       handleConfirm();
     } else if (keyCode === 13) {
-      // back to main menu
+      // back to main menu (preserve newer behavior)
       try { include('main-menu.js'); } catch (e) { log('ERROR loading main-menu.js: ' + e.message); }
     }
   };
 
   jsmaf.onKeyUp = function () { /* intentionally empty */ };
 
-  // initial highlight
+  // initial highlight (call after layout built)
   updateHighlight();
+
+  // load persisted config (this will also start audio if music is enabled)
+  loadConfig();
 
   log('Interactive Config UI loaded!');
   log('Total elements: ' + jsmaf.root.children.length);
