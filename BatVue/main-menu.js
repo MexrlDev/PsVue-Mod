@@ -1,4 +1,3 @@
-//
 (function () {
   include('languages.js');
   log(lang.loadingMainMenu);
@@ -775,3 +774,4 @@
   })();
 
 })();
+
