@@ -1,5 +1,3 @@
-// config_ui-final-updated-fixed.js
-
 if (typeof libc_addr === 'undefined') {
   include('userland.js');
 }
@@ -1030,3 +1028,4 @@ if (typeof lang === 'undefined') {
   log('Interactive Config UI loaded!');
   log('Total elements: ' + jsmaf.root.children.length);
 })();
+
