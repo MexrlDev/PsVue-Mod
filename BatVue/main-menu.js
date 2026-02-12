@@ -38,7 +38,7 @@
   var logoHeight = 135; // smaller height (maintain aspect ratio)
   var logoMargin = 20; // margin from top-right
 
-  // --- Logo (top-right) created before Batman so we can place Batman on top of it ---
+  // --- Logo (top-right) created before Batman image
   var logo = new Image({
     url: 'file:///../download0/img/logo.png',
     x: 1920 - logoMargin - logoWidth, // top-right X
@@ -52,8 +52,6 @@
   jsmaf.root.children.push(logo);
 
   // --- Single central Batman image manager ---
-  // Keeps one large Batman image in the middle of the screen (not behind the background).
-  // You can edit its X via setBatmanX(x) or setBatmanPosition(x,y) and size via setBatmanSize(w,h).
   var _batmanUrl = 'file:///../download0/img/Batman.png';
   var _batman = null;
   var _batmanBaseX = centerX; // center X (logical center)
@@ -85,7 +83,6 @@
       scaleY: 1.0
     });
     // Insert Batman after the logo so Batman renders on top of the logo
-    // background is at index 0, logo at index 1, so insert at index 2
     jsmaf.root.children.splice(2, 0, _batman);
   }
 
