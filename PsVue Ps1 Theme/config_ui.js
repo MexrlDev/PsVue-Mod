@@ -75,9 +75,10 @@ if (typeof lang === 'undefined') {
       if (!audio) {
         audio = new jsmaf.AudioClip();
         audio.volume = 0.5;
-        audio.open('file://../download0/sfx/bgm.wav');
+        try { audio.open('file://../download0/sfx/bgm.wav'); } catch (e) { log('Audio open error: ' + (e.message || e)); }
+        // try to play if API exists
+        try { if (typeof audio.play === 'function') audio.play(); } catch (e) {}
       } else {
-        // if there is an API to resume/play, try safely
         try { if (typeof audio.play === 'function') audio.play(); } catch (e) {}
       }
     } catch (e) { log('Audio start error: ' + e.message); }
@@ -85,10 +86,8 @@ if (typeof lang === 'undefined') {
   function stopBackgroundAudio() {
     try {
       if (audio) {
-        // attempt safe shutdown (some environments support close/stop)
-        try { if (typeof audio.close === 'function') audio.close(); } catch (e) {}
         try { if (typeof audio.stop === 'function') audio.stop(); } catch (e) {}
-        // clear reference so it can be re-created later
+        try { if (typeof audio.close === 'function') audio.close(); } catch (e) {}
         audio = null;
       }
     } catch (e) { log('Audio stop error: ' + e.message); }
@@ -174,7 +173,7 @@ if (typeof lang === 'undefined') {
     }
   }, 120);
 
-  // ==================== LOGO (with fade‑in and dynamic idle) ====================
+  // ==================== LOGO (with fade-in and dynamic idle) ====================
   var logo = new Image({
     url: 'file:///../download0/img/logo.png',
     x: 1620,
@@ -273,7 +272,7 @@ if (typeof lang === 'undefined') {
     { key: 'jb_behavior', label: lang.jbBehavior, imgKey: 'jbBehavior', type: 'cycle' }
   ];
 
-  // Two‑column layout: first three on left, last two on right, back button below right column
+  // Two-column layout: first three on left, last two on right, back button below right column
   var leftColumnX = 200;
   var rightColumnX = 1920 - 200 - 400; // 1320
   var startY = 300;
@@ -666,20 +665,21 @@ if (typeof lang === 'undefined') {
     }, step);
   }
 
-  // marker blink helper (subtle)
+  // marker blink helper (fixed: immediate visible on focus, stop clears interval and hides)
   function startMarkerBlink(marker) {
     if (!marker) return;
     if (marker._blinkInterval) return;
+    marker.visible = true;
     marker._blinkInterval = jsmaf.setInterval(function () {
       marker.visible = !marker.visible;
       if (marker.visible) {
         var start = Date.now();
-        var pdur = 300;
+        var pdur = 350;
         var baseScale = marker.scaleX || 1.0;
         var intv = jsmaf.setInterval(function () {
           var now = Date.now();
           var t = Math.min((now - start) / pdur, 1);
-          var s = baseScale + (1.06 - baseScale) * Math.sin(t * Math.PI);
+          var s = baseScale + (1.08 - baseScale) * Math.sin(t * Math.PI);
           marker.scaleX = s;
           marker.scaleY = s;
           if (t >= 1) jsmaf.clearInterval(intv);
@@ -707,8 +707,13 @@ if (typeof lang === 'undefined') {
         if (!buttonMarkers[m]) continue;
         var show = Math.random() > 0.5;
         buttonMarkers[m].visible = show;
-        buttonMarkers[m].scaleX = show ? 1.0 + Math.random() * 0.18 : 0.9;
-        buttonMarkers[m].scaleY = buttonMarkers[m].scaleX;
+        if (show) {
+          buttonMarkers[m].scaleX = 1.0 + Math.random() * 0.18;
+          buttonMarkers[m].scaleY = buttonMarkers[m].scaleX;
+        } else {
+          buttonMarkers[m].scaleX = 0.9;
+          buttonMarkers[m].scaleY = 0.9;
+        }
       }
     }, 120);
   }
@@ -730,7 +735,7 @@ if (typeof lang === 'undefined') {
     if (focusedMarker) startMarkerBlink(focusedMarker);
   }
 
-  // highlight update
+  // highlight update (ensures previous marker is stopped and hidden before starting current)
   var prevButton = -1;
   function updateHighlight() {
     if (prevButton >= 0 && prevButton !== currentButton) {
@@ -740,7 +745,8 @@ if (typeof lang === 'undefined') {
       var prevMark = buttonMarkers[prevButton];
       if (prevBtn) {
         prevBtn.url = normalButtonImg;
-        prevBtn.alpha = 0.9;
+        // set to subdued alpha to match older script behavior
+        prevBtn.alpha = 0.7;
         prevBtn.borderColor = 'transparent';
         prevBtn.borderWidth = 0;
         prevBtn.scaleX = 1.0;
@@ -775,12 +781,13 @@ if (typeof lang === 'undefined') {
         b.borderColor = 'rgb(155,154,150)';
         b.borderWidth = 3;
         if (m) {
+          stopMarkerBlink(m);
           m.visible = true;
           startMarkerBlink(m);
         }
       } else {
         b.url = normalButtonImg;
-        b.alpha = 0.9;
+        b.alpha = 0.7;
         if (m && !flashingMode) {
           stopMarkerBlink(m);
           m.visible = false;
@@ -878,7 +885,7 @@ if (typeof lang === 'undefined') {
     }
   }, 50);
 
-  // --- Logo fade-in + dynamic idle loop
+  // --- LOGO fade-in + idle loop ---
   (function logoAndIntro() {
     // overlay fade
     var overlayStart = Date.now();
@@ -947,7 +954,13 @@ if (typeof lang === 'undefined') {
         currentConfig[key] = !currentConfig[key];
 
         if (key === 'music') {
-          if (currentConfig.music) startBackgroundAudio(); else stopBackgroundAudio();
+          // robust audio toggle: always stop then start if enabled to avoid duplicate audio objects
+          try { stopBackgroundAudio(); } catch (e) {}
+          if (currentConfig.music) {
+            startBackgroundAudio();
+          } else {
+            // already stopped above
+          }
         }
 
         if (key === 'autolapse' && currentConfig.autolapse === true) {
@@ -975,7 +988,12 @@ if (typeof lang === 'undefined') {
     var valEl = valueTexts[idx];
     if (!opt || !valEl) return;
     if (opt.type === 'toggle') {
-      valEl.url = currentConfig[opt.key] ? 'file:///assets/img/check_small_on.png' : 'file:///assets/img/check_small_off.png';
+      try {
+        valEl.url = currentConfig[opt.key] ? 'file:///assets/img/check_small_on.png' : 'file:///assets/img/check_small_off.png';
+      } catch (e) {
+        // if valEl is a Text element fallback
+        try { valEl.text = currentConfig[opt.key] ? lang.on : lang.off; } catch (ee) {}
+      }
     } else {
       if (useImageText) {
         valEl.url = textImageBase + jbBehaviorImgKeys[currentConfig.jb_behavior] + '.png';
@@ -1076,7 +1094,7 @@ if (typeof lang === 'undefined') {
     });
   }
 
-  // key handling (linear navigation)
+  // key handling (linear navigation, but marker/update behavior now matches older script)
   jsmaf.onKeyDown = function (keyCode) {
     if (keyCode === 6 || keyCode === 5) {
       currentButton = (currentButton + 1) % buttons.length;
@@ -1095,6 +1113,10 @@ if (typeof lang === 'undefined') {
   };
 
   jsmaf.onKeyUp = function () {};
+
+  // Expose flashing API (kept for parity)
+  this.stopAdFlash = stopRandomFlashing;
+  this.startAdFlash = startRandomFlashing;
 
   updateHighlight();
   loadConfig();
