@@ -1,0 +1,405 @@
+// USB Pictures Viewer for PS4.. not working
+
+
+// Displays .png images from /mnt/usb*/pictures (lowercase only)
+
+// Controls:
+//   Previous image: key codes 58, 10, 7
+//   Next image:     key codes 56, 11, 6
+//   Back to menu:   key codes 8, 14, 17
+
+
+// Shows USB mount status and number of images found.
+
+if (typeof libc_addr === 'undefined') {
+  try { include('userland.js'); } catch (e) { log('userland include failed: ' + (e.message || e)); }
+}
+if (typeof lang === 'undefined') {
+  try { include('languages.js'); } catch (e) { log('languages include failed: ' + (e.message || e)); }
+}
+
+(function () {
+  'use strict';
+  log('Loading USB Pictures Viewer (PS4)');
+
+  // ----- syscall registration
+  try { fn.register(0x05, 'open_sys',   ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
+  try { fn.register(0x06, 'close_sys',  ['bigint'], 'bigint'); } catch (e) {}
+  try { fn.register(0x110,'getdents',   ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
+
+  // ----- safe helpers
+  function strToAddr(s) {
+    try {
+      var addr = mem.malloc((s ? s.length : 0) + 1);
+      if (!addr) return null;
+      for (var i = 0; i < (s ? s.length : 0); i++)
+        mem.view(addr).setUint8(i, s.charCodeAt(i));
+      mem.view(addr).setUint8((s ? s.length : 0), 0);
+      return addr;
+    } catch (e) { return null; }
+  }
+
+  function safeBigIntToNumber(bi) {
+    try {
+      if (bi === null || typeof bi === 'undefined') return 0;
+      if (typeof bi === 'number') return bi;
+      if (typeof bi === 'object' && bi.lo !== undefined) return bi.lo;
+      if (typeof bi === 'bigint') return Number(bi);
+      return Number(bi);
+    } catch (e) { return 0; }
+  }
+
+  // ----- state
+  var __running = true;
+  var images = [];                 // { name, path }
+  var currentIndex = 0;
+  var usbMounts = [];              // list of mounted USB base paths (e.g., '/mnt/usb0')
+  var mountStatus = '';            // human‑readable status
+
+  // UI elements
+  var background = null;
+  var framePanel = null;
+  var displayedImage = null;
+  var filenameText = null;
+  var infoText = null;
+  var statusText = null;           // shows USB detection status
+  var cursor = null;
+
+  // layout
+  var SCREEN_W = 1920, SCREEN_H = 1080;
+  var PANEL_W = 1100, PANEL_H = 640;
+  var PANEL_X = Math.round((SCREEN_W - PANEL_W) / 2);
+  var PANEL_Y = Math.round((SCREEN_H - PANEL_H) / 2);
+
+  // key mappings
+  var prevKeys = {58: true, 10: true, 7: true};
+  var nextKeys = {56: true, 11: true, 6: true};
+  var backKeys = {8: true, 14: true, 17: true};
+
+  // clear root
+  try { jsmaf.root.children.length = 0; } catch (e) {}
+
+  // styles
+  try { new Style({ name: 'viewerSmall', color: 'white', size: 26 }); } catch (e) {}
+  try { new Style({ name: 'viewerTitle', color: 'white', size: 34 }); } catch (e) {}
+  try { new Style({ name: 'statusStyle', color: '#AAAAAA', size: 22 }); } catch (e) {}
+
+  // background
+  try {
+    background = new Image({
+      url: 'file:///../download0/img/multiview_bg_VAF.png',
+      x: 0, y: 0, width: SCREEN_W, height: SCREEN_H
+    });
+    jsmaf.root.children.push(background);
+  } catch (e) {}
+
+  // frame panel
+  try {
+    framePanel = new Image({
+      url: 'file:///assets/img/panel_bg.png',
+      x: PANEL_X, y: PANEL_Y - 30,
+      width: PANEL_W, height: PANEL_H + 60,
+      alpha: 0.95
+    });
+    jsmaf.root.children.push(framePanel);
+  } catch (e) {}
+
+  // image area
+  try {
+    displayedImage = new Image({
+      url: '',
+      x: PANEL_X + 20,
+      y: PANEL_Y + 20,
+      width: PANEL_W - 40,
+      height: PANEL_H - 120,
+      visible: false
+    });
+    jsmaf.root.children.push(displayedImage);
+  } catch (e) { displayedImage = null; }
+
+  // filename text
+  try {
+    filenameText = new jsmaf.Text();
+    filenameText.text = '';
+    filenameText.x = PANEL_X + 20;
+    filenameText.y = PANEL_Y + (PANEL_H - 80) + 40;
+    filenameText.style = 'viewerSmall';
+    filenameText.alpha = 1;
+    jsmaf.root.children.push(filenameText);
+  } catch (e) { filenameText = null; }
+
+  // info line (top)
+  try {
+    infoText = new jsmaf.Text();
+    infoText.text = 'USB Pictures Viewer — arrows: left/right, circle/back: main menu';
+    infoText.x = PANEL_X + 20;
+    infoText.y = PANEL_Y - 18;
+    infoText.style = 'viewerSmall';
+    infoText.alpha = 0.95;
+    jsmaf.root.children.push(infoText);
+  } catch (e) { infoText = null; }
+
+  // status line (bottom, shows USB detection)
+  try {
+    statusText = new jsmaf.Text();
+    statusText.text = '';
+    statusText.x = PANEL_X + 20;
+    statusText.y = PANEL_Y + PANEL_H - 10;
+    statusText.style = 'statusStyle';
+    statusText.alpha = 0.9;
+    jsmaf.root.children.push(statusText);
+  } catch (e) { statusText = null; }
+
+  // hidden cursor
+  try {
+    cursor = new Image({
+      url: 'file:///../download0/img/cursor.png',
+      x: 960, y: 540, width: 28, height: 28, visible: false
+    });
+    jsmaf.root.children.push(cursor);
+  } catch (e) { cursor = null; }
+
+  // ----- function: check which USB mounts exist
+  function detectUsbMounts() {
+    var mounts = [];
+    var basePaths = ['/mnt/usb'];
+    for (var u = 0; u <= 7; u++) basePaths.push('/mnt/usb' + u);
+
+    for (var i = 0; i < basePaths.length; i++) {
+      var p = basePaths[i];
+      var paddr = strToAddr(p);
+      if (!paddr) continue;
+      try {
+        var fd = fn.open_sys(paddr, new BigInt(0, 0), new BigInt(0, 0));
+        if (fd && !fd.eq(new BigInt(0xffffffff, 0xffffffff))) {
+          // can open the directory → mounted
+          mounts.push(p);
+          fn.close_sys(fd);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    return mounts;
+  }
+
+  // ----- scan for .png files inside /mnt/usb*/pictures
+  function scanUsbPictures() {
+    var found = [];
+    usbMounts = detectUsbMounts();
+
+    for (var m = 0; m < usbMounts.length; m++) {
+      var base = usbMounts[m];
+      var folderPath = base + (base.endsWith('/') ? '' : '/') + 'pictures'; // exactly "pictures"
+      var paddr = strToAddr(folderPath);
+      if (!paddr) continue;
+      var fd = null;
+      try {
+        fd = fn.open_sys(paddr, new BigInt(0, 0), new BigInt(0, 0));
+      } catch (e) {}
+      if (!fd || fd.eq(new BigInt(0xffffffff, 0xffffffff))) continue; // pictures folder not found
+
+      var buf = mem.malloc(4096);
+      if (!buf) { try { fn.close_sys(fd); } catch (e) {} continue; }
+
+      var count = fn.getdents(fd, buf, new BigInt(0, 4096));
+      var cnum = safeBigIntToNumber(count);
+      if (cnum > 0) {
+        var offset = 0;
+        while (offset < cnum) {
+          try {
+            var reclen = mem.view(buf.add(new BigInt(0, offset + 4))).getUint16(0, true);
+            var d_type = mem.view(buf.add(new BigInt(0, offset + 6))).getUint8(0);
+            var namlen = mem.view(buf.add(new BigInt(0, offset + 7))).getUint8(0);
+            var name = '';
+            for (var n = 0; n < namlen; n++) {
+              name += String.fromCharCode(mem.view(buf.add(new BigInt(0, offset + 8 + n))).getUint8(0));
+            }
+            if (name && name !== '.' && name !== '..' && d_type === 8 && /\.png$/i.test(name)) {
+              found.push({ name: name, path: folderPath + '/' + name });
+            }
+            offset += reclen;
+          } catch (e) { offset += 1; }
+        }
+      }
+      try { fn.close_sys(fd); } catch (e) {}
+      try { mem.free(buf); } catch (e) {}
+    }
+
+    // build status string
+    if (usbMounts.length === 0) {
+      mountStatus = 'No USB drive detected';
+    } else {
+      var parts = [];
+      for (var i = 0; i < usbMounts.length; i++) {
+        var cnt = found.filter(function(img) { return img.path.indexOf(usbMounts[i]) === 0; }).length;
+        parts.push(usbMounts[i] + ' (' + cnt + ' img)');
+      }
+      mountStatus = 'USB: ' + parts.join(' | ');
+    }
+
+    return found;
+  }
+
+  // ----- initial scan
+  try {
+    images = scanUsbPictures();
+    if (!images || images.length === 0) {
+      if (infoText) infoText.text = 'No .png images found in any USB "pictures" folder';
+    } else {
+      // sort alphabetically so they appear as pic1, pic2, ...
+      images.sort(function(a, b) {
+        var an = (a.name || '').toLowerCase();
+        var bn = (b.name || '').toLowerCase();
+        return an < bn ? -1 : (an > bn ? 1 : 0);
+      });
+      currentIndex = 0;
+    }
+    if (statusText) statusText.text = mountStatus;
+  } catch (e) {
+    log('initial scan error: ' + (e.message || e));
+    images = [];
+    if (statusText) statusText.text = 'Scan error';
+  }
+
+  // ----- display current image
+  function showCurrentImage() {
+    if (!images || images.length === 0) {
+      if (displayedImage) { displayedImage.visible = false; displayedImage.url = ''; }
+      if (filenameText) filenameText.text = '';
+      return;
+    }
+    var item = images[currentIndex];
+    if (!item) return;
+    var url = (item.path.indexOf('file://') === 0) ? item.path : ('file://' + item.path);
+    try {
+      if (!displayedImage) {
+        displayedImage = new Image({
+          url: url,
+          x: PANEL_X + 20,
+          y: PANEL_Y + 20,
+          width: PANEL_W - 40,
+          height: PANEL_H - 120,
+          visible: true
+        });
+        jsmaf.root.children.push(displayedImage);
+      } else {
+        displayedImage.url = url;
+        displayedImage.visible = true;
+        displayedImage.x = PANEL_X + 20;
+        displayedImage.y = PANEL_Y + 20;
+        displayedImage.width = PANEL_W - 40;
+        displayedImage.height = PANEL_H - 120;
+      }
+    } catch (e) {
+      log('error showing image: ' + (e.message || e));
+      try { displayedImage.visible = false; } catch (e) {}
+    }
+    try { if (filenameText) filenameText.text = item.name; } catch (e) {}
+    try { if (infoText) infoText.text = 'Image ' + (currentIndex + 1) + ' / ' + images.length; } catch (e) {}
+    try { if (statusText) statusText.text = mountStatus; } catch (e) {}
+  }
+
+  function showNext() {
+    if (!images || images.length === 0) return;
+    currentIndex = (currentIndex + 1) % images.length;
+    showCurrentImage();
+  }
+
+  function showPrev() {
+    if (!images || images.length === 0) return;
+    currentIndex = (currentIndex - 1 + images.length) % images.length;
+    showCurrentImage();
+  }
+
+  // ----- input handlers
+  jsmaf.onKeyDown = function(keyCode) {
+    if (!__running) return;
+    try {
+      if (prevKeys[keyCode]) { showPrev(); return; }
+      if (nextKeys[keyCode]) { showNext(); return; }
+      if (backKeys[keyCode]) {
+        fullUnload();
+        try { include('main-menu.js'); } catch (e) { log('include main-menu failed: ' + (e.message || e)); }
+        return;
+      }
+    } catch (e) {}
+  };
+
+  // mouse support (optional)
+  jsmaf.onMouseDown = function(mx, my, btn) {
+    if (!__running) return;
+    try {
+      var ix = PANEL_X + 20, iy = PANEL_Y + 20;
+      var iw = PANEL_W - 40, ih = PANEL_H - 120;
+      if (mx >= ix && my >= iy && mx <= ix + iw && my <= iy + ih) {
+        var rel = mx - ix;
+        if (rel < iw * 0.45) showPrev();
+        else if (rel > iw * 0.55) showNext();
+        return;
+      }
+      if (mx >= PANEL_X && my >= PANEL_Y - 30 && mx <= PANEL_X + 120 && my <= PANEL_Y) {
+        fullUnload();
+        try { include('main-menu.js'); } catch (e) {}
+        return;
+      }
+    } catch (e) {}
+  };
+
+  // ----- auto‑refresh every 5 seconds
+  var _intervals = [];
+  function _setInterval(fn, ms) { var id = jsmaf.setInterval(fn, ms); _intervals.push(id); return id; }
+  function _clearAllIntervals() {
+    for (var i = 0; i < _intervals.length; i++)
+      try { jsmaf.clearInterval(_intervals[i]); } catch (e) {}
+    _intervals = [];
+  }
+
+  var refreshInterval = _setInterval(function() {
+    if (!__running) return;
+    try {
+      var newImages = scanUsbPictures();
+      var changed = (newImages.length !== images.length);
+      if (!changed) {
+        for (var i = 0; i < newImages.length; i++) {
+          if (!images[i] || images[i].path !== newImages[i].path) {
+            changed = true;
+            break;
+          }
+        }
+      }
+      if (changed) {
+        images = newImages;
+        images.sort(function(a, b) {
+          var an = (a.name || '').toLowerCase();
+          var bn = (b.name || '').toLowerCase();
+          return an < bn ? -1 : (an > bn ? 1 : 0);
+        });
+        currentIndex = 0;
+        showCurrentImage();
+        log('USB Pictures Viewer: refreshed, now ' + images.length + ' images.');
+      }
+      // always update status text (in case USB was removed)
+      if (statusText) statusText.text = mountStatus;
+      if (images.length === 0 && infoText) {
+        infoText.text = 'No .png images found in any USB "pictures" folder';
+      }
+    } catch (e) {}
+  }, 5000);
+
+  // ----- clean‑up
+  function fullUnload() {
+    try { __running = false; } catch (e) {}
+    try { _clearAllIntervals(); } catch (e) {}
+    try { if (displayedImage) displayedImage.visible = false; } catch (e) {}
+    try { if (framePanel) framePanel.visible = false; } catch (e) {}
+    try { if (filenameText) filenameText.visible = false; } catch (e) {}
+    try { if (infoText) infoText.visible = false; } catch (e) {}
+    try { if (statusText) statusText.visible = false; } catch (e) {}
+    try { if (cursor) cursor.visible = false; } catch (e) {}
+    try { jsmaf.onKeyDown = function(){}; } catch (e) {}
+    try { jsmaf.onMouseDown = function(){}; } catch (e) {}
+  }
+
+  // start
+  try { showCurrentImage(); } catch (e) {}
+
+})();
