@@ -465,6 +465,8 @@
   // ---------- Go back ----------
   function goBack() {
     if (fadingIn) return;
+    // FIX: cleanup before leaving
+    cleanup();
     try { log('Returning to main menu...'); } catch (e) {}
     try { include('main-menu.js'); } catch (e) { try { log('ERROR loading main-menu.js: ' + e.message); } catch (ee) {} }
   }
