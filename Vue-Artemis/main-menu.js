@@ -13,7 +13,7 @@
     { label: 'About',      script: 'about.js', icon: 'abt' }
   ];
 
-  // Fine‑tune text centering (pixels to add to x for each label)
+  // Fine‑tune text centering
   var textOffsets = [5, 5, 0, 0];  // Start Game and Cheat Menu are moved to the right a bit
 
   // ---------- Global Variables ----------
