@@ -130,7 +130,7 @@
     jsmaf.root.children.push(ps4Header);
     fadeElements.push(ps4Header);
 
-    // PS4 names
+    // hey look its me
     var ps4Names = ['MexrlDev'];
     var y = ps4Header.y + 40;
     for (var i = 0; i < ps4Names.length; i++) {
@@ -147,7 +147,7 @@
 
     // PsVue Credits header
     var psVueHeader = new jsmaf.Text();
-    psVueHeader.text = 'PsVue Credits:';
+    psVueHeader.text = 'PsVue After Free Credits:';
     psVueHeader.style = 'creditHeader';
     psVueHeader.x = CENTER_X - 200;
     psVueHeader.y = y + 30;
