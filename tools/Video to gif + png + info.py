@@ -3,7 +3,7 @@ import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import imageio
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 from PIL import Image, ImageSequence
 
 # Select file (video or gif)
