@@ -1,0 +1,1 @@
+alert("Music is so chill...\n it does kinda fir the theme, yeah?\n\n The button is a joke, i had nothing to fill the gab it looked uly\nso i just added random image")

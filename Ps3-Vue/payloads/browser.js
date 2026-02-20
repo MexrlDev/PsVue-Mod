@@ -1,0 +1,1 @@
+alert("This was supposed to open the browser and go to a search engine but never worked\n\nyou can use web ui instead\n\n\nOr get creative and create your own script here\nmnt/sandbox/CUSA00960_000/download0/payloads/browser.js")
