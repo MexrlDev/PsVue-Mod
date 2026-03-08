@@ -21,6 +21,8 @@ This project is based on **Vue After Free v1.2** by Vuemony.
 
 * 🔗 Original release: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.2)
 * 🔗 The newest release that the current mods works on [https://github.com/Vuemony/vue-after-free/releases/tag/v1.4](https://github.com/Vuemony/vue-after-free/releases/tag/v1.4)
+Now mod works on
+[https://github.com/Vuemony/vue-after-free/releases/tag/v2.0](https://github.com/Vuemony/vue-after-free/releases/tag/v2.0)
 
 All credit for the core exploit logic, research, and foundation goes to the original PsVue / Vue After Free contributors.
 
