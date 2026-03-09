@@ -12,16 +12,23 @@
 
 * Improved and modernized UI layout
 * Smoother button animations and transitions
+* Very high quality themes, all made from scratch
+* Adding things that are just crazy for just a theme. to make user experiment a lot better
+* Always care about the user experiment then the theme function.
 
 ---
 
 ## Based On
 
-This project is based on **Vue After Free v1.2** by Vuemony.
+This project was based on **Vue After Free v1.2** by Vuemony.
 
-* 🔗 Original release: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.2)
-* 🔗 The newest release that the current mods works on [https://github.com/Vuemony/vue-after-free/releases/tag/v1.4](https://github.com/Vuemony/vue-after-free/releases/tag/v1.4)
-Now mod works on
+Some projects also based on **Vue After Free v1.4** by Vuemony.
+
+Now based on **Vue After Free v2.0** by Vuemony.
+
+* 🔗 Original release that vue mod started on: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.2)
+* 🔗 All older releases from 1.1 to 1.4 please use this: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.4](https://github.com/Vuemony/vue-after-free/releases/tag/v1.4)
+* 🔗 The newest release that the current mods works on:
 [https://github.com/Vuemony/vue-after-free/releases/tag/v2.0](https://github.com/Vuemony/vue-after-free/releases/tag/v2.0)
 
 All credit for the core exploit logic, research, and foundation goes to the original PsVue / Vue After Free contributors.
@@ -31,7 +38,8 @@ All credit for the core exploit logic, research, and foundation goes to the orig
 ##  Stability & Known Issues
 
 * Some edge‑case UI bugs may still exist
-* Rare crashes are possible during menu transitions or script reloads
+* Rare crashes are possible during menu transitions or script reloads (only for old themes, older than 1.4)
+* Song has issues since i started this project, but a lot of themee doesnt have that problem. for example.. RE9 does not have this kind of problems.
 
 ---
 
