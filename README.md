@@ -83,3 +83,19 @@ to go back from file explorer you have to use L2 ORRR the box on top under te se
 # Important 
 
 i an not responsable for any ps4/ps5 that breaks after using it, follow the applying steps
+
+---
+
+# ReadMe
+
+## Theme Modding Usijg My Themes
+
+This project is open-source and licensed under the GNU General Public License v3.0 (GPL-3.0).
+
+You are free to modify, distribute, and share this project and its themes. Developers may use the code and themes in their own projects, as long as they comply with the GPL-3.0 license.
+
+Please keep proper credit to the original project and contributors when redistributing or modifying the source code.
+
+Enjoy creating and improving the theme :)
+
+---
