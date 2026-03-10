@@ -29,7 +29,7 @@ Now based on **Vue After Free v2.0** by Vuemony.
 * 🔗 Original release that vue mod started on: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.2)
 * 🔗 All older releases from 1.1 to 1.4 please use this: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.4](https://github.com/Vuemony/vue-after-free/releases/tag/v1.4)
 * 🔗 The newest release that the current mods works on:
-[https://github.com/Vuemony/vue-after-free/releases/tag/v2.0](https://github.com/Vuemony/vue-after-free/releases/tag/v2.0)
+[https://github.com/Vuemony/vue-after-free/releases/tag/v2.0](https://github.com/Vuemony/vue-after-free/releases/tag/2.0)
 
 All credit for the core exploit logic, research, and foundation goes to the original PsVue / Vue After Free contributors.
 
