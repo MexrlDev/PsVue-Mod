@@ -81,7 +81,7 @@ This project is just made for fun by me but grew fast.
 
 ## Socials
 
-[![X (Twitter)](https://img.shields.io/badge/X-%40Mexrl-black?style=for-the-badge&logo=x&logoColor=white)](https://x.com/Mexrl)
+[![X](https://img.shields.io/badge/@Mexrl-black?style=for-the-badge&logo=x&logoColor=black&labelColor=white)](https://x.com/Mexrl)
 
 ---
 
