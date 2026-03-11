@@ -88,7 +88,7 @@ i an not responsable for any ps4/ps5 that breaks after using it, follow the appl
 
 # ReadMe
 
-## Theme Modding Using My Themes
+- Theme Modding Using My Themes
 
 This project is open-source and licensed under the [GNU General Public License v3.0](https://github.com/Vuemony/vue-after-free/blob/main/LICENSE) (GPL-3.0).
 
