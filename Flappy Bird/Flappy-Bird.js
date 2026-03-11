@@ -1,6 +1,8 @@
 // PsVue Flappy Bird Port
 // By MexrlDev (2026)
 
+// You may also use this code to learn, study, make projects
+
 (function () {
   // ---------------- Config ----------------
   var SCREEN_W = 1920, SCREEN_H = 1080;
@@ -34,7 +36,7 @@
   var GAMEOVER_WIDTH = Math.round(GAMEOVER_ORIG_W * 1.5);
   var GAMEOVER_HEIGHT = Math.round(GAMEOVER_ORIG_H * 1.5);
 
-  // Gameplay
+  // Game Physics
   var GRAVITY = 0.5;
   var JUMP_FORCE = -10;
   var PIPE_SPEED = 5;
