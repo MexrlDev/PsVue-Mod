@@ -2,9 +2,9 @@
 
 **PsVue‑Mod** is a visual and feature enhancement mod for **PsVue (Vue After Free)**, focused on a cleaner UI, smoother animations, and additional quality options while keeping the original exploit logic intact.
 
-> **Status:** Experimental
+> **Status:** Ready to use
 >
-> This mod may still contain bugs and, in rare cases, could crash. Stability has been improved, and crashes are believed to be low.
+> It has become stable and easy now, after the last couple themes i made and shared, its of course the best time to start using themes on yoir vue to enjoy this wondeful word of themes and exploring.
 
 ---
 
@@ -69,14 +69,18 @@ Special thanks to everyone who contributed research, reverse engineering, toolin
 * **Cryptogenic** — Reference for CVE‑2018‑4441
 * **rebelle3** — Reference for CVE‑2017‑7117
 * **SiSTRo** — GoldHen
+---
+
+## What happened
+
+This project is just made for fun by me but grew fast.
 
 ---
 
-##  What happened
+## Socials
 
-This project is just made for fun by me but grew fast
-
----
+[![X (Twitter)](https://img.shields.io/badge/X-%40MexrlDev-black?style=for-the-badge&logo=x&logoColor=white)](https://x.com/Mexrl)
+[![Followers](https://img.shields.io/twitter/follow/MexrlDev?style=for-the-badge&logo=x&logoColor=white&label=Followers)](https://x.com/Mexrl)
 
 ---
 
