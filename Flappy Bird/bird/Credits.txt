@@ -1,5 +1,10 @@
-Flappy Bird VUE Port
-Made by MexrlDev
+Flappy Bird PsVue Port 
+
+Author: Mexrl
+Flappy Bird Jsmaf Code License: GPL-3.0 License
+Copyright (c) 2026 MexrlDev
+
+- - -
 
 Third-Party Assets
 
