@@ -34,6 +34,8 @@ Some projects also based on **Vue After Free v1.4** by Vuemony.
 
 Now based on **Vue After Free v2.0** by Vuemony.
 
+Now my payload games are **Based on all vue versions no matter what**
+
 * 🔗 Original release that vue mod started on: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.2](https://github.com/Vuemony/vue-after-free/releases/tag/v1.2)
 * 🔗 All older releases from 1.1 to 1.4 please use this: [https://github.com/Vuemony/vue-after-free/releases/tag/v1.4](https://github.com/Vuemony/vue-after-free/releases/tag/v1.4)
 * 🔗 The newest release that the current mods works on:
@@ -80,7 +82,7 @@ This project is just made for fun by me but grew fast.
 ## Socials
 
 [![X (Twitter)](https://img.shields.io/badge/X-%40Mexrl-black?style=for-the-badge&logo=x&logoColor=white)](https://x.com/Mexrl)
-[![Followers](https://img.shields.io/twitter/follow/Mexrl?style=for-the-badge&logo=x&logoColor=white&label=Followers)](https://x.com/Mexrl)
+[![Follow](https://img.shields.io/twitter/follow/Mexrl?style=for-the-badge&logo=x&logoColor=white&label=Followers)](https://x.com/Mexrl)
 
 ---
 
