@@ -1,0 +1,16 @@
+Flappy Bird VUE Port
+Made by MexrlDev
+
+Third-Party Assets
+
+Sprites and audio assets from:
+https://github.com/samuelcust/flappy-bird-assets
+
+Author: Samuel Custodio
+License: MIT License
+Copyright (c) 2019 Samuel Custodio
+
+Additional sounds from:
+https://sounds.spriters-resource.com/mobile/flappybird/
+
+The MIT license text for these assets is included in this project.
