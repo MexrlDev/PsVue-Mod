@@ -8,6 +8,14 @@
 
 ---
 
+## Exploring 
+
+* I do researches on vue as well, to find new things we can use, and find things we never thought of. as today i made the first game for Vue, which was flappy bird. and it was a very surprising success.
+* Open Source, my projects are very open source and for people and developers to explore and learn from, since i was the first who modified vue, and learn on it. it will stay forever as my main thinh to help people, mod, and research in vue.
+* of course thanks to Vue After Free team that bring that wonderful app to us as ready to use and easy to work on.
+   
+---
+
 ## Features
 
 * Improved and modernized UI layout
