@@ -1,5 +1,7 @@
 // PsVue Port By MexrlDev
 
+// You may also use this code to learn, study, make projects.
+
 (function () {
   // ---------- Configuration ----------
   var SCREEN_W = 1920;
