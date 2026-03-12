@@ -1,5 +1,7 @@
 // Flappy Bird PsVue Port 
 
+// You may also use this code to learn, study, make projects
+
 // Author: Mexrl
 // The Code License: GPL-3.0 License
 // Copyright (c) 2026 MexrlDev
