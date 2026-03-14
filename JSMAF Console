@@ -1,0 +1,1451 @@
+// Coded by MexrlDev
+// Made for debugging VUE
+
+(function () {
+  'use strict';
+
+  /* ================= CONFIG ================= */
+
+  var DISPLAY_W = 1920;
+  var DISPLAY_H = 1080;
+
+  // Key mappings
+  var KEY_CONFIRM = 14;
+  var KEY_BACK = 13;
+  var KEY_DOWN = 6;
+  var KEY_UP = 4;
+  var KEY_SCROLL_UP = 5;
+  var KEY_SCROLL_DOWN = 7;
+  var KEY_PAGE_LEFT = 11;
+  var KEY_PAGE_RIGHT = 10;
+  var KEY_DELETE = 15;
+  var KEY_MODE_SWITCH = 8;
+  var KEY_ENTER_SHORTCUT = 9;
+  var KEY_BIG_TEXT = 12;
+  var KEY_BOX_SCROLL_UP = 3;
+  var KEY_CURSOR_LEFT = 1;
+  var KEY_CURSOR_RIGHT = 2;
+
+  // Keyboard panel geometry
+  var PANEL_CENTER_X = 960;
+  var PANEL_CENTER_Y = 850;
+  var PANEL_WIDTH = 1600;
+  var PANEL_HEIGHT = 300;
+
+  // Key area start position
+  var KEYBOARD_START_X = 360;
+  var KEYBOARD_START_Y = 740;
+
+  // Prompt and log positioning
+  var PROMPT_Y = 430;
+  var LOG_START_Y = 470;
+
+  // Input box (thats the keyboard output pop-up) settings
+  var BOX_X = 600;
+  var BOX_Y = 150;
+  var BOX_WIDTH = 800;
+  var BOX_HEIGHT = 240;
+  var BOX_LINE_HEIGHT = 26;
+  var BOX_MAX_CHARS_PER_LINE = 40;
+
+  // Transparency settings
+  var BOX_TEXT_ALPHA = 0.34;
+  var BOX_BG_ALPHA = 0.18;
+
+  // Cursor character
+  var CURSOR_CHAR = '|';
+
+  // Background image and music paths
+  var ASSET_PATH = 'file://../download0/payloads/Console/';
+  var BACKGROUND_IMG = ASSET_PATH + 'DOOM.jpg';
+  var BACKGROUND_MUSIC = ASSET_PATH + 'SONG.wav';
+
+  var MENU_ITEMS = [
+    'Run Command',
+    'Clear Console',
+    'Toggle Auto-Scroll',
+    'Console Mode',
+    'Restart Music',
+    'Exit'
+  ];
+
+  var PANEL_IMG = 'file://../download0/payloads/Console/Overidk.png';
+  var KEY_IMG = 'file://../download0/payloads/Console/OveridkFRFR.png';
+
+  /* ================= STATE ================= */
+
+  var selectedMenu = 0;
+  var autoScroll = true;
+  var inputMode = false;
+  var inputBuffer = '';
+  var history = [];
+  var historyIndex = -1;
+  var logBuffer = [];
+  var MAX_LOG_LINES = 9000;
+  var VISIBLE_LOG_LINES = 9;
+  var logScrollOffset = 0;
+  var rootMode = 'jsmaf';
+
+  var keyboardVisible = false;
+  var keyboardMode = 'letters';
+  var shiftMode = false;
+  var numbersPage = 0;
+  var kbRow = 0;
+  var kbCol = 0;
+  var keyboardCells = [];
+  var keyboardPanel = null;
+  var keyboardTitle = null;
+
+  // Console mode
+  var consoleMode = false;
+
+  // Background music
+  var bgm = null;
+  var isPlaying = false;
+
+  // Background image
+  var bgImage = null;
+
+  // Input box (pop-up) state
+  var boxVisible = false;
+  var boxLines = [];
+  var boxScrollOffset = 0;
+  var boxBackground = null;
+  var boxTexts = [];
+
+  // Cursor position
+  var cursorPos = 0;
+
+  // Predefined symbol pages for 123 mode
+  var numberPages = [
+    [
+      ['!','@','#','$','%','^','&','*','(',')'],
+      [':',';','/','\\','<','>','?','=','+','-']
+    ],
+    [
+      ['[',']','{','}','|','~','`','\'','"',','],
+      ['.','_','+','=','-','*','/','\\','&','%']
+    ],
+    [
+      ['€','£','¥','©','®','™','±','×','÷','°'],
+      ['∞','≠','≤','≥','√','∫','∑','∏','π','·']
+    ]
+  ];
+
+  var layers = {
+    background: [],
+    ui: [],
+    popup: [],
+    keyboard: []
+  };
+
+  var layerOrder = ['background', 'ui', 'popup', 'keyboard'];
+
+  var ui = {
+    title: null,
+    subtitle: null,
+    status: null,
+    clock: null,
+    menuTexts: [],
+    prompt: null,
+    logTexts: []
+  };
+
+  var clockInterval = null;
+
+  /* ================= CONSOLE POLYFILL ================= */
+  (function() {
+    if (typeof console === 'undefined') {
+      window.console = {};
+    }
+
+    function formatArgs(args) {
+      return Array.prototype.map.call(args, function(arg) {
+        try {
+          if (typeof arg === 'object') return JSON.stringify(arg);
+          return String(arg);
+        } catch (e) {
+          return '[object]';
+        }
+      }).join(' ');
+    }
+
+    var methods = ['log', 'info', 'warn', 'error', 'debug'];
+    for (var i = 0; i < methods.length; i++) {
+      (function(m) {
+        var original = typeof console[m] === 'function' ? console[m] : null;
+        console[m] = function() {
+          if (original) original.apply(console, arguments);
+          var prefix = (m === 'error' ? 'ERROR: ' : (m === 'warn' ? 'WARN: ' : ''));
+          if (typeof logLine === 'function') {
+            logLine(prefix + formatArgs(arguments));
+          }
+        };
+      })(methods[i]);
+    }
+  })();
+
+  /* ================= HELPERS ================= */
+
+  function hasJsmaf() {
+    return typeof jsmaf !== 'undefined' && !!jsmaf;
+  }
+
+  function ensureJsmafRoot() {
+    if (!hasJsmaf()) return false;
+    if (!jsmaf.root) {
+      try { jsmaf.root = { children: [] }; } catch (e) { return false; }
+    }
+    if (!Array.isArray(jsmaf.root.children)) jsmaf.root.children = [];
+    return true;
+  }
+
+  function safeNewStyle(name, props) {
+    try {
+      var cfg = { name: name };
+      var k;
+      for (k in props) {
+        if (props.hasOwnProperty(k)) cfg[k] = props[k];
+      }
+      new Style(cfg);
+    } catch (e) {}
+  }
+
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function nowStamp() {
+    try { return new Date().toLocaleTimeString(); } catch (e) { return String(Date.now()); }
+  }
+
+  function formatValue(v) {
+    if (v === undefined) return 'undefined';
+    if (v === null) return 'null';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'function') return '[function]';
+    if (typeof v === 'object') {
+      try {
+        return JSON.stringify(v, function (key, value) {
+          if (typeof value === 'function') return '[function]';
+          if (value instanceof Error) {
+            return { name: value.name, message: value.message, stack: value.stack };
+          }
+          return value;
+        }, 2);
+      } catch (e) {
+        return Object.prototype.toString.call(v);
+      }
+    }
+    return String(v);
+  }
+
+  function rebuildRootChildren() {
+    if (!ensureJsmafRoot()) return;
+
+    var children = [];
+    var i, j, arr;
+
+    for (i = 0; i < layerOrder.length; i++) {
+      arr = layers[layerOrder[i]] || [];
+      for (j = 0; j < arr.length; j++) {
+        if (arr[j]) children.push(arr[j]);
+      }
+    }
+
+    jsmaf.root.children.length = 0;
+    for (i = 0; i < children.length; i++) jsmaf.root.children.push(children[i]);
+  }
+
+  function clearLayers() {
+    for (var k in layers) {
+      if (layers.hasOwnProperty(k)) layers[k].length = 0;
+    }
+  }
+
+  function addToLayer(layerName, obj) {
+    if (!layers[layerName]) layers[layerName] = [];
+    layers[layerName].push(obj);
+    return obj;
+  }
+
+  function setStatus(text) {
+    if (ui.status) ui.status.text = String(text);
+  }
+
+  function refreshPrompt() {
+    if (!ui.prompt) return;
+    if (keyboardVisible) {
+      ui.prompt.alpha = 0;
+    } else {
+      ui.prompt.alpha = 1;
+      ui.prompt.text = '../> ';
+    }
+  }
+
+  /* ================= CLOCK ================= */
+  function updateClock() {
+    if (!ui.clock) return;
+    try {
+      ui.clock.text = new Date().toLocaleTimeString();
+    } catch (e) {
+      ui.clock.text = '--:--:--';
+    }
+  }
+
+  function startClock() {
+    if (clockInterval) clearInterval(clockInterval);
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
+  }
+
+  function stopClock() {
+    if (clockInterval) {
+      clearInterval(clockInterval);
+      clockInterval = null;
+    }
+  }
+
+  /* ================= BACKGROUND MUSIC ================= */
+
+  function safePlayBgm(loop) {
+    if (!bgm) return;
+    if (typeof bgm.play !== 'function') {
+      logLine('Audio play API unavailable.');
+      return;
+    }
+    try {
+      bgm.play(loop !== false);
+      isPlaying = true;
+      logLine('BGM started');
+    } catch (e) {
+      logLine('Error playing music: ' + e.message);
+    }
+  }
+
+  function safeStopBgm() {
+    if (!bgm) return;
+    if (typeof bgm.stop !== 'function') {
+      logLine('Audio stop API unavailable.');
+      isPlaying = false;
+      return;
+    }
+    try {
+      bgm.stop();
+      isPlaying = false;
+      logLine('BGM stopped');
+    } catch (e) {
+      logLine('Error stopping music: ' + e.message);
+    }
+  }
+
+  function initBackgroundMusic() {
+    if (!hasJsmaf()) return;
+    try {
+      if (typeof jsmaf.bgm === 'undefined' || jsmaf.bgm === null) {
+        jsmaf.bgm = new jsmaf.AudioClip();
+        jsmaf.bgm.volume = 0.5;
+        try {
+          jsmaf.bgm.open(BACKGROUND_MUSIC);
+        } catch (openErr) {
+          logLine('song not found: ' + BACKGROUND_MUSIC);
+          jsmaf.bgm = null;  // prevent further use
+          return;
+        }
+      }
+      bgm = jsmaf.bgm;
+
+      if (typeof bgm.volume === 'number') {
+        bgm.volume = 0.5;
+      }
+
+      safePlayBgm(true);
+    } catch (e) {
+      logLine('Failed to load background music: ' + e.message);
+    }
+  }
+
+  function playMusic(loop) {
+    safePlayBgm(loop);
+  }
+
+  function stopMusic() {
+    safeStopBgm();
+  }
+
+  function restartMusic() {
+    if (!bgm) {
+      initBackgroundMusic();
+      return;
+    }
+
+    try {
+      if (typeof bgm.stop === 'function') {
+        bgm.stop();
+      }
+    } catch (e1) {}
+
+    try {
+      if (typeof bgm.open === 'function') {
+        bgm.open(BACKGROUND_MUSIC);
+      }
+    } catch (e2) {
+      logLine('song not found: ' + BACKGROUND_MUSIC);
+    }
+
+    safePlayBgm(true);
+    logLine('BGM restarted');
+  }
+
+  function pauseMusic() {
+    if (!bgm) return;
+    try {
+      if (typeof bgm.pause === 'function') {
+        bgm.pause();
+        isPlaying = false;
+        logLine('BGM paused');
+      } else {
+        logLine('Pause API unavailable.');
+      }
+    } catch (e) {
+      logLine('Error pausing music: ' + e.message);
+    }
+  }
+
+  function resumeMusic() {
+    if (!bgm) return;
+    try {
+      if (typeof bgm.resume === 'function') {
+        bgm.resume();
+        isPlaying = true;
+        logLine('BGM resumed');
+      } else {
+        logLine('Resume API unavailable.');
+      }
+    } catch (e) {
+      logLine('Error resuming music: ' + e.message);
+    }
+  }
+
+  function toggleMusic() {
+    if (isPlaying) {
+      stopMusic();
+    } else {
+      playMusic(true);
+    }
+  }
+
+  function setVolume(v) {
+    if (!bgm) return;
+    try {
+      bgm.volume = v;
+      logLine('Volume set to ' + v);
+    } catch (e) {}
+  }
+
+  /* ================= LOGGING ================= */
+
+  function refreshLog() {
+    var i, idx;
+    for (i = 0; i < VISIBLE_LOG_LINES; i++) {
+      idx = logScrollOffset + i;
+      if (ui.logTexts[i]) {
+        ui.logTexts[i].text = idx < logBuffer.length ? logBuffer[idx] : '';
+      }
+    }
+  }
+
+  function logLine(text) {
+    var s = String(text);
+    logBuffer.push('[' + nowStamp() + '] ' + s);
+
+    if (logBuffer.length > MAX_LOG_LINES) {
+      logBuffer.shift();
+      if (logScrollOffset > 0) logScrollOffset--;
+    }
+
+    var maxOffset = Math.max(0, logBuffer.length - VISIBLE_LOG_LINES);
+    if (autoScroll) logScrollOffset = maxOffset;
+    else logScrollOffset = clamp(logScrollOffset, 0, maxOffset);
+
+    refreshLog();
+
+    try {
+      if (typeof log === 'function') log('[CONSOLE] ' + s);
+    } catch (e) {}
+  }
+
+  function scrollLog(delta) {
+    autoScroll = false;
+
+    var maxOffset = Math.max(0, logBuffer.length - VISIBLE_LOG_LINES);
+    logScrollOffset += delta;
+
+    if (logScrollOffset < 0) logScrollOffset = 0;
+    if (logScrollOffset > maxOffset) logScrollOffset = maxOffset;
+
+    refreshLog();
+  }
+
+  function clearConsole() {
+    logBuffer.length = 0;
+    logScrollOffset = 0;
+    autoScroll = true;
+    refreshLog();
+    logLine('Console cleared.');
+  }
+
+  function toggleAutoScroll() {
+    autoScroll = !autoScroll;
+    if (autoScroll) logScrollOffset = Math.max(0, logBuffer.length - VISIBLE_LOG_LINES);
+    logLine('Auto-scroll: ' + (autoScroll ? 'ON' : 'OFF'));
+  }
+
+  function restartApp() {
+    logLine('Restart requested.');
+    stopClock();
+
+    try {
+      if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
+        debugging.restart();
+        return;
+      }
+    } catch (e1) {}
+
+    try {
+      if (hasJsmaf() && typeof jsmaf.restart === 'function') {
+        jsmaf.restart();
+        return;
+      }
+    } catch (e2) {}
+
+    logLine('No restart API available.');
+  }
+
+  function exitApp() {
+    logLine('Exit requested.');
+    restartApp();
+  }
+
+  /* ================= COMMAND EXEC ================= */
+
+  function runCommand(code) {
+    var src = String(code || '').trim();
+
+    if (!src) {
+      logLine('Empty command.');
+      return;
+    }
+
+    history.push(src);
+    historyIndex = history.length;
+
+    logLine('> ' + src);
+
+    try {
+      var result = (0, eval)(src);
+      if (result !== undefined) logLine(formatValue(result));
+    } catch (e) {
+      logLine('Error: ' + (e && e.message ? e.message : String(e)));
+    }
+
+    inputBuffer = '';
+    cursorPos = 0;
+    refreshPrompt();
+    updateInputBox();
+  }
+
+  /* ================= MENU ================= */
+
+  function setMenuVisible(visible) {
+    var alpha = visible ? 1 : 0;
+    for (var i = 0; i < ui.menuTexts.length; i++) {
+      if (ui.menuTexts[i]) ui.menuTexts[i].alpha = alpha;
+    }
+  }
+
+  function updateMenuHighlight() {
+    var i;
+    for (i = 0; i < ui.menuTexts.length; i++) {
+      if (!ui.menuTexts[i]) continue;
+      ui.menuTexts[i].text = (i === selectedMenu ? '> ' : '  ') + MENU_ITEMS[i];
+      ui.menuTexts[i].color = (i === selectedMenu ? 'rgb(120,200,255)' : 'white');
+    }
+  }
+
+  function moveMenu(delta) {
+    if (consoleMode) return;
+    selectedMenu = (selectedMenu + delta + MENU_ITEMS.length) % MENU_ITEMS.length;
+    updateMenuHighlight();
+  }
+
+  function handleMenuSelection(idx) {
+    var sel = MENU_ITEMS[idx];
+    logLine('Menu select: ' + sel);
+
+    if (sel === 'Run Command') {
+      openKeyboard();
+      return;
+    }
+
+    if (sel === 'Clear Console') {
+      clearConsole();
+      return;
+    }
+
+    if (sel === 'Toggle Auto-Scroll') {
+      toggleAutoScroll();
+      return;
+    }
+
+    if (sel === 'Console Mode') {
+      enterConsoleMode();
+      return;
+    }
+
+    if (sel === 'Restart Music') {
+      restartMusic();
+      return;
+    }
+
+    if (sel === 'Exit') {
+      exitApp();
+      return;
+    }
+  }
+
+  function confirmMenu() {
+    if (consoleMode) return;
+    handleMenuSelection(selectedMenu);
+  }
+
+  /* ================= CONSOLE MODE ================= */
+
+  function enterConsoleMode() {
+    consoleMode = true;
+    setMenuVisible(false);
+    setStatus('Console Mode – use Up/Down to scroll, O to exit');
+  }
+
+  function exitConsoleMode() {
+    consoleMode = false;
+    setMenuVisible(true);
+    setStatus('Ready');
+    updateMenuHighlight();
+  }
+
+  /* ================= INPUT BOX (POP-UP) ================= */
+
+  function chunkTextWithCursor(text, cursor, chunkSize) {
+    var displayString = text.slice(0, cursor) + CURSOR_CHAR + text.slice(cursor);
+    var lines = [];
+    for (var i = 0; i < displayString.length; i += chunkSize) {
+      lines.push(displayString.substr(i, chunkSize));
+    }
+    return lines;
+  }
+
+  function updateInputBox() {
+    if (!boxVisible) return;
+
+    boxLines = chunkTextWithCursor(inputBuffer, cursorPos, BOX_MAX_CHARS_PER_LINE);
+
+    var totalLines = boxLines.length;
+    var visibleLines = Math.floor(BOX_HEIGHT / BOX_LINE_HEIGHT);
+
+    var cursorDisplayPos = cursorPos + (cursorPos <= inputBuffer.length ? 0 : 1);
+    var cursorLine = Math.floor(cursorDisplayPos / BOX_MAX_CHARS_PER_LINE);
+    var maxScroll = Math.max(0, totalLines - visibleLines);
+    if (cursorLine < boxScrollOffset) {
+      boxScrollOffset = cursorLine;
+    } else if (cursorLine >= boxScrollOffset + visibleLines) {
+      boxScrollOffset = cursorLine - visibleLines + 1;
+    }
+    boxScrollOffset = clamp(boxScrollOffset, 0, maxScroll);
+
+    for (var i = 0; i < boxTexts.length; i++) {
+      var lineIdx = boxScrollOffset + i;
+      if (lineIdx < totalLines) {
+        boxTexts[i].text = boxLines[lineIdx];
+        boxTexts[i].alpha = BOX_TEXT_ALPHA;
+      } else {
+        boxTexts[i].text = '';
+        boxTexts[i].alpha = 0;
+      }
+    }
+  }
+
+  function scrollBoxUp() {
+    if (!boxVisible) return;
+    if (boxScrollOffset > 0) {
+      boxScrollOffset--;
+      updateInputBox();
+    }
+  }
+
+  function moveCursorLeft() {
+    if (!boxVisible) return;
+    if (cursorPos > 0) {
+      cursorPos--;
+      updateInputBox();
+    }
+  }
+
+  function moveCursorRight() {
+    if (!boxVisible) return;
+    if (cursorPos < inputBuffer.length) {
+      cursorPos++;
+      updateInputBox();
+    }
+  }
+
+  function insertChar(ch) {
+    if (!boxVisible) return;
+    inputBuffer = inputBuffer.slice(0, cursorPos) + ch + inputBuffer.slice(cursorPos);
+    cursorPos++;
+    updateInputBox();
+  }
+
+  function deleteChar() {
+    if (!boxVisible) return;
+    if (cursorPos > 0) {
+      inputBuffer = inputBuffer.slice(0, cursorPos - 1) + inputBuffer.slice(cursorPos);
+      cursorPos--;
+      updateInputBox();
+    }
+  }
+
+  /* ================= KEYBOARD LAYOUT ================= */
+
+  function getKeyboardLayout() {
+    if (keyboardMode === 'numbers') {
+      var page = numberPages[numbersPage] || numberPages[0];
+      return [
+        ['1','2','3','4','5','6','7','8','9','0'],
+        page[0],
+        page[1],
+        ['ABC','SPACE','ENTER','DEL']
+      ];
+    }
+
+    return [
+      ['q','w','e','r','t','y','u','i','o','p'],
+      ['a','s','d','f','g','h','j','k','l'],
+      ['SHIFT','z','x','c','v','b','n','m','DEL'],
+      ['123','SPACE','ENTER']
+    ];
+  }
+
+  function destroyKeyboard() {
+    keyboardCells.length = 0;
+    if (keyboardPanel) {
+      layers.keyboard.length = 0;
+      keyboardPanel = null;
+      keyboardTitle = null;
+      rebuildRootChildren();
+    }
+  }
+
+  function buildKeyboard() {
+    destroyKeyboard();
+
+    var layout = getKeyboardLayout();
+    var startY = KEYBOARD_START_Y;
+    var rowGap = 12;
+    var colGap = 8;
+    var keyH = 52;
+
+    var panelX = PANEL_CENTER_X - PANEL_WIDTH / 2;
+    var panelY = PANEL_CENTER_Y - PANEL_HEIGHT / 2;
+
+    keyboardPanel = new Image({
+      url: PANEL_IMG,
+      x: panelX,
+      y: panelY,
+      width: PANEL_WIDTH,
+      height: PANEL_HEIGHT
+    });
+    keyboardPanel.alpha = 0.25;
+    addToLayer('keyboard', keyboardPanel);
+
+    keyboardCells = [];
+
+    var r, c, row, totalW, x0, keyW, label, bg, tx, cell;
+    for (r = 0; r < layout.length; r++) {
+      row = layout[r];
+
+      totalW = 0;
+      for (c = 0; c < row.length; c++) {
+        label = row[c];
+        totalW += getKeyWidth(label);
+        if (c < row.length - 1) totalW += colGap;
+      }
+
+      x0 = Math.floor((DISPLAY_W - totalW) / 2);
+      if (x0 < KEYBOARD_START_X) x0 = KEYBOARD_START_X;
+
+      var x = x0;
+      for (c = 0; c < row.length; c++) {
+        label = row[c];
+        keyW = getKeyWidth(label);
+
+        bg = new Image({
+          url: KEY_IMG,
+          x: x,
+          y: startY + r * (keyH + rowGap),
+          width: keyW,
+          height: keyH
+        });
+        bg.alpha = 0.82;
+        bg.borderColor = 'rgba(255,255,255,0.10)';
+        bg.borderWidth = 1;
+
+        tx = new jsmaf.Text();
+        tx.style = 'small';
+        tx.x = x + 10;
+        tx.y = startY + r * (keyH + rowGap) + 15;
+        tx.text = displayLabelForKey(label);
+        tx.color = 'rgb(25,25,25)';
+
+        cell = {
+          row: r,
+          col: c,
+          label: label,
+          bg: bg,
+          tx: tx
+        };
+
+        keyboardCells.push(cell);
+        addToLayer('keyboard', bg);
+        addToLayer('keyboard', tx);
+
+        x += keyW + colGap;
+      }
+    }
+
+    kbRow = 0;
+    kbCol = 0;
+    updateKeyboardHighlight();
+    rebuildRootChildren();
+  }
+
+  function getKeyWidth(label) {
+    if (label === 'SPACE') return 340;
+    if (label === 'ENTER') return 180;
+    if (label === 'SHIFT') return 130;
+    if (label === '123' || label === 'ABC') return 120;
+    if (label === 'DEL') return 110;
+    return 76;
+  }
+
+  function displayLabelForKey(label) {
+    if (keyboardMode === 'letters') {
+      if (label.length === 1 && /[a-z]/i.test(label)) {
+        return shiftMode ? label.toUpperCase() : label.toLowerCase();
+      }
+      if (label === 'SHIFT') return shiftMode ? 'BIG' : 'small';
+      return label;
+    }
+
+    if (label === 'ABC') return 'ABC';
+    return label;
+  }
+
+  function getCellAt(row, col) {
+    var i;
+    for (i = 0; i < keyboardCells.length; i++) {
+      if (keyboardCells[i].row === row && keyboardCells[i].col === col) return keyboardCells[i];
+    }
+    return null;
+  }
+
+  function updateKeyboardLabels() {
+    var i, cell;
+    for (i = 0; i < keyboardCells.length; i++) {
+      cell = keyboardCells[i];
+      cell.tx.text = displayLabelForKey(cell.label);
+    }
+  }
+
+  function updateKeyboardHighlight() {
+    var i, cell, active;
+    for (i = 0; i < keyboardCells.length; i++) {
+      cell = keyboardCells[i];
+      active = (cell.row === kbRow && cell.col === kbCol);
+
+      cell.bg.alpha = active ? 1.0 : 0.82;
+      cell.bg.borderColor = active ? 'rgb(120,200,255)' : 'rgba(255,255,255,0.10)';
+      cell.bg.borderWidth = active ? 3 : 1;
+
+      cell.tx.color = active ? 'rgb(0,60,120)' : 'rgb(25,25,25)';
+    }
+  }
+
+  function moveKeyboardCursor(dx, dy) {
+    var layout = getKeyboardLayout();
+    var newRow = kbRow + dy;
+    var newCol = kbCol;
+
+    if (dy !== 0) {
+      if (newRow < 0) newRow = 0;
+      if (newRow >= layout.length) newRow = layout.length - 1;
+      if (newCol >= layout[newRow].length) newCol = layout[newRow].length - 1;
+    }
+
+    if (dx !== 0) {
+      if (keyboardMode === 'letters') {
+        newCol = kbCol + dx;
+        if (newCol < 0) {
+          newCol = layout[newRow].length - 1;
+        } else if (newCol >= layout[newRow].length) {
+          newCol = 0;
+        }
+      } else {
+        newCol = kbCol + dx;
+        if (newCol < 0) {
+          numbersPage = (numbersPage - 1 + numberPages.length) % numberPages.length;
+          reloadKeyboard();
+          kbRow = newRow;
+          kbCol = layout[newRow].length - 1;
+          updateKeyboardHighlight();
+          return;
+        } else if (newCol >= layout[newRow].length) {
+          numbersPage = (numbersPage + 1) % numberPages.length;
+          reloadKeyboard();
+          kbRow = newRow;
+          kbCol = 0;
+          updateKeyboardHighlight();
+          return;
+        }
+      }
+    }
+
+    kbRow = newRow;
+    kbCol = newCol;
+    updateKeyboardHighlight();
+  }
+
+  function reloadKeyboard() {
+    buildKeyboard();
+  }
+
+  function toggleShift() {
+    if (keyboardMode === 'letters') {
+      shiftMode = !shiftMode;
+      updateKeyboardLabels();
+      updateKeyboardHighlight();
+      rebuildRootChildren();
+    }
+  }
+
+  function applyKeyboardKey(label) {
+    if (label === 'SPACE') {
+      insertChar(' ');
+      refreshPrompt();
+      return;
+    }
+
+    if (label === 'DEL') {
+      deleteChar();
+      refreshPrompt();
+      return;
+    }
+
+    if (label === 'SHIFT') {
+      shiftMode = !shiftMode;
+      updateKeyboardLabels();
+      updateKeyboardHighlight();
+      rebuildRootChildren();
+      return;
+    }
+
+    if (label === '123') {
+      keyboardMode = 'numbers';
+      numbersPage = 0;
+      shiftMode = false;
+      reloadKeyboard();
+      refreshPrompt();
+      return;
+    }
+
+    if (label === 'ABC') {
+      keyboardMode = 'letters';
+      shiftMode = false;
+      reloadKeyboard();
+      refreshPrompt();
+      return;
+    }
+
+    if (label === 'ENTER') {
+      closeKeyboardAndRun();
+      return;
+    }
+
+    if (keyboardMode === 'letters') {
+      if (label.length === 1) {
+        var ch = shiftMode ? label.toUpperCase() : label.toLowerCase();
+        insertChar(ch);
+        refreshPrompt();
+        return;
+      }
+    }
+
+    if (keyboardMode === 'numbers') {
+      insertChar(label);
+      refreshPrompt();
+      return;
+    }
+  }
+
+  function pressSelectedKeyboardKey() {
+    var cell = getCellAt(kbRow, kbCol);
+    if (!cell) return;
+    applyKeyboardKey(cell.label);
+  }
+
+  function toggleKeyboardMode() {
+    if (keyboardMode === 'letters') {
+      keyboardMode = 'numbers';
+      numbersPage = 0;
+    } else {
+      keyboardMode = 'letters';
+    }
+    shiftMode = false;
+    reloadKeyboard();
+    refreshPrompt();
+  }
+
+  function openKeyboard() {
+    keyboardVisible = true;
+    inputMode = true;
+    keyboardMode = 'letters';
+    shiftMode = false;
+    numbersPage = 0;
+    kbRow = 0;
+    kbCol = 0;
+    setStatus('Keyboard opened. Use D-pad to move, X to press, Square to delete,L2 to go to 123 MODE, R2 enter, Triangle to switch keyboard mods, L1/R1 on 123 Mode, Options to go up in input box,\nL3/R3 to move text cursour, Right stick up is SPACE.');
+
+    boxVisible = true;
+    ui.prompt.alpha = 0;
+    if (boxBackground) boxBackground.alpha = BOX_BG_ALPHA;
+    for (var i = 0; i < boxTexts.length; i++) {
+      boxTexts[i].alpha = BOX_TEXT_ALPHA;
+    }
+    cursorPos = inputBuffer.length;
+    boxScrollOffset = 0;
+    updateInputBox();
+
+    buildKeyboard();
+    refreshPrompt();
+  }
+
+  function closeKeyboard() {
+    keyboardVisible = false;
+    inputMode = false;
+    destroyKeyboard();
+
+    boxVisible = false;
+    ui.prompt.alpha = 1;
+    if (boxBackground) boxBackground.alpha = 0;
+    for (var i = 0; i < boxTexts.length; i++) {
+      boxTexts[i].alpha = 0;
+    }
+
+    setStatus('Ready');
+    refreshPrompt();
+  }
+
+  function closeKeyboardAndRun() {
+    var cmd = inputBuffer;
+    closeKeyboard();
+    runCommand(cmd);
+  }
+
+  /* ================= UI BUILD ================= */
+
+  function buildBaseUI() {
+    clearLayers();
+
+    safeNewStyle('titleStyle', {
+      color: 'white',
+      size: 42,
+      bold: true,
+      shadow: true
+    });
+
+    safeNewStyle('subtitleStyle', {
+      color: '#aaffaa',
+      size: 22,
+      bold: false,
+      shadow: false
+    });
+
+    safeNewStyle('menuStyle', {
+      color: 'white',
+      size: 28,
+      bold: false,
+      shadow: true
+    });
+
+    safeNewStyle('logStyle', {
+      color: 'white',
+      size: 20,
+      bold: false,
+      shadow: false
+    });
+
+    safeNewStyle('clockStyle', {
+      color: '#aaa',
+      size: 22,
+      bold: false,
+      shadow: false
+    });
+
+    safeNewStyle('boxTextStyle', {
+      color: 'white',
+      size: 20,
+      bold: false,
+      shadow: false
+    });
+
+    if (BACKGROUND_IMG) {
+      try {
+        bgImage = new Image({
+          url: BACKGROUND_IMG,
+          x: 0,
+          y: 0,
+          width: DISPLAY_W,
+          height: DISPLAY_H
+        });
+        bgImage.alpha = 0.5;
+        addToLayer('background', bgImage);
+      } catch (e) {
+        logLine('Failed to load background image: ' + e.message);
+      }
+    }
+
+    ui.title = new jsmaf.Text();
+    ui.title.style = 'titleStyle';
+    ui.title.x = 40;
+    ui.title.y = 36;
+    ui.title.text = 'JSMAF Console';
+    addToLayer('ui', ui.title);
+
+    ui.subtitle = new jsmaf.Text();
+    ui.subtitle.style = 'subtitleStyle';
+    ui.subtitle.x = 40;
+    ui.subtitle.y = 84;
+    ui.subtitle.text = 'Use D-pad UP/DOWN. X selects. O go back/EXIT.';
+    addToLayer('ui', ui.subtitle);
+
+    ui.status = new jsmaf.Text();
+    ui.status.style = 'subtitleStyle';
+    ui.status.x = 40;
+    ui.status.y = 112;
+    ui.status.text = 'Ready';
+    addToLayer('ui', ui.status);
+
+    ui.clock = new jsmaf.Text();
+    ui.clock.style = 'clockStyle';
+    ui.clock.x = DISPLAY_W - 210;
+    ui.clock.y = 36;
+    ui.clock.text = '00:00:00';
+    addToLayer('ui', ui.clock);
+
+    ui.menuTexts.length = 0;
+    var i, t;
+    for (i = 0; i < MENU_ITEMS.length; i++) {
+      t = new jsmaf.Text();
+      t.style = 'menuStyle';
+      t.x = 48;
+      t.y = 160 + i * 42;
+      t.text = '';
+      addToLayer('ui', t);
+      ui.menuTexts.push(t);
+    }
+
+    ui.prompt = new jsmaf.Text();
+    ui.prompt.style = 'subtitleStyle';
+    ui.prompt.x = 40;
+    ui.prompt.y = PROMPT_Y;
+    ui.prompt.text = 'js> ';
+    addToLayer('ui', ui.prompt);
+
+    ui.logTexts.length = 0;
+    for (i = 0; i < VISIBLE_LOG_LINES; i++) {
+      t = new jsmaf.Text();
+      t.style = 'logStyle';
+      t.x = 40;
+      t.y = LOG_START_Y + i * 26;
+      t.text = '';
+      addToLayer('ui', t);
+      ui.logTexts.push(t);
+    }
+
+    // Input box background
+    boxBackground = new Image({
+      url: PANEL_IMG,
+      x: BOX_X,
+      y: BOX_Y,
+      width: BOX_WIDTH,
+      height: BOX_HEIGHT
+    });
+    boxBackground.alpha = 0;
+    addToLayer('popup', boxBackground);
+
+    // Create text lines for the box
+    var visibleLines = Math.floor(BOX_HEIGHT / BOX_LINE_HEIGHT);
+    for (i = 0; i < visibleLines; i++) {
+      var lineText = new jsmaf.Text();
+      lineText.style = 'boxTextStyle';
+      lineText.x = BOX_X + 10;
+      lineText.y = BOX_Y + 5 + i * BOX_LINE_HEIGHT;
+      lineText.text = '';
+      lineText.alpha = 0;
+      addToLayer('popup', lineText);
+      boxTexts.push(lineText);
+    }
+
+    updateMenuHighlight();
+    refreshLog();
+    refreshPrompt();
+    rebuildRootChildren();
+  }
+
+  /* ================= KEY HANDLING ================= */
+
+  function onKeyboardKeyDown(keyCode) {
+    if (keyboardVisible) {
+      if (keyCode === KEY_CURSOR_LEFT) {
+        moveCursorLeft();
+        return true;
+      }
+      if (keyCode === KEY_CURSOR_RIGHT) {
+        moveCursorRight();
+        return true;
+      }
+      if (keyCode === KEY_BOX_SCROLL_UP) {
+        scrollBoxUp();
+        return true;
+      }
+
+      if (keyCode === KEY_UP) {
+        moveKeyboardCursor(0, -1);
+        return true;
+      }
+      if (keyCode === KEY_DOWN) {
+        moveKeyboardCursor(0, 1);
+        return true;
+      }
+
+      if (keyCode === 4 || keyCode === KEY_SCROLL_DOWN) {
+        moveKeyboardCursor(-1, 0);
+        return true;
+      }
+      if (keyCode === KEY_SCROLL_UP || keyCode === 6) {
+        moveKeyboardCursor(1, 0);
+        return true;
+      }
+
+      if (keyboardMode === 'numbers') {
+        if (keyCode === KEY_PAGE_LEFT) {
+          numbersPage = (numbersPage + 1) % numberPages.length;
+          reloadKeyboard();
+          return true;
+        }
+        if (keyCode === KEY_PAGE_RIGHT) {
+          numbersPage = (numbersPage - 1 + numberPages.length) % numberPages.length;
+          reloadKeyboard();
+          return true;
+        }
+      }
+
+      if (keyCode === KEY_DELETE) {
+        deleteChar();
+        return true;
+      }
+
+      if (keyCode === 59) {
+        insertChar(' ');
+        return true;
+      }
+
+      if (keyCode === KEY_MODE_SWITCH) {
+        toggleKeyboardMode();
+        return true;
+      }
+
+      if (keyCode === KEY_ENTER_SHORTCUT) {
+        closeKeyboardAndRun();
+        return true;
+      }
+
+      if (keyCode === KEY_BIG_TEXT) {
+        toggleShift();
+        return true;
+      }
+
+      if (keyCode === KEY_CONFIRM) {
+        pressSelectedKeyboardKey();
+        return true;
+      }
+
+      if (keyCode === KEY_BACK) {
+        closeKeyboard();
+        return true;
+      }
+      return false;
+    }
+
+    if (consoleMode) {
+      if (keyCode === KEY_UP) {
+        scrollLog(-1);
+        return true;
+      }
+      if (keyCode === KEY_DOWN) {
+        scrollLog(1);
+        return true;
+      }
+      if (keyCode === KEY_SCROLL_UP) {
+        scrollLog(-1);
+        return true;
+      }
+      if (keyCode === KEY_SCROLL_DOWN) {
+        scrollLog(1);
+        return true;
+      }
+      if (keyCode === KEY_BACK) {
+        exitConsoleMode();
+        return true;
+      }
+      return false;
+    }
+
+    if (keyCode === KEY_DOWN) {
+      moveMenu(1);
+      return true;
+    }
+    if (keyCode === KEY_UP) {
+      moveMenu(-1);
+      return true;
+    }
+    if (keyCode === KEY_SCROLL_UP) {
+      scrollLog(-1);
+      return true;
+    }
+    if (keyCode === KEY_SCROLL_DOWN) {
+      scrollLog(1);
+      return true;
+    }
+    if (keyCode === KEY_CONFIRM) {
+      confirmMenu();
+      return true;
+    }
+    if (keyCode === KEY_BACK) {
+      exitApp();
+      return true;
+    }
+
+    return false;
+  }
+
+  function bindJsmafKeys() {
+    if (!hasJsmaf()) return;
+
+    jsmaf.onKeyDown = function (keyCode) {
+      return onKeyboardKeyDown(keyCode);
+    };
+
+    jsmaf.onKeyUp = function () {};
+  }
+
+  /* ================= PUBLIC API ================= */
+
+  var api = {
+    init: init,
+    log: logLine,
+    clearConsole: clearConsole,
+    runCommand: runCommand,
+    openKeyboard: openKeyboard,
+    closeKeyboard: closeKeyboard,
+    restartApp: restartApp,
+    exitApp: exitApp,
+    toggleAutoScroll: toggleAutoScroll,
+    restartMusic: restartMusic,
+    stopMusic: stopMusic,
+    playMusic: playMusic,
+    pauseMusic: pauseMusic,
+    resumeMusic: resumeMusic,
+    setVolume: setVolume,
+    setInput: function (text) {
+      inputBuffer = String(text || '');
+      cursorPos = inputBuffer.length;
+      refreshPrompt();
+      updateInputBox();
+    },
+    getInput: function () {
+      return inputBuffer;
+    },
+    getHistory: function () {
+      return history.slice();
+    },
+    setSelected: function (idx) {
+      selectedMenu = clamp(idx | 0, 0, MENU_ITEMS.length - 1);
+      updateMenuHighlight();
+    },
+    getState: function () {
+      return {
+        selected: selectedMenu,
+        autoScroll: autoScroll,
+        inputMode: inputMode,
+        keyboardVisible: keyboardVisible,
+        keyboardMode: keyboardMode,
+        shiftMode: shiftMode,
+        numbersPage: numbersPage,
+        inputBuffer: inputBuffer,
+        cursorPos: cursorPos,
+        historyLength: history.length,
+        logLines: logBuffer.length,
+        mode: rootMode,
+        consoleMode: consoleMode,
+        boxVisible: boxVisible,
+        isPlaying: isPlaying
+      };
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.__jsmaf_console_menu = api;
+  }
+
+  /* ================= INIT ================= */
+
+  function init() {
+    try {
+      if (!ensureJsmafRoot()) {
+        return;
+      }
+
+      rootMode = 'jsmaf';
+      buildBaseUI();
+      bindJsmafKeys();
+      startClock();
+      initBackgroundMusic();
+
+      setStatus('JSMAF mode active.');
+      logLine('Console initialized.');
+      logLine('This is a JSMAF console with a virtual keyboard.');
+      logLine('Select "Run Command" to open the keyboard.');
+      logLine('Made for everyone to use it, mod it, learn on it')
+
+      if (typeof startBgmIfEnabled === 'function') {
+        try { startBgmIfEnabled(); } catch (e1) {}
+      }
+    } catch (e) {
+      try { logLine('init error: ' + (e && e.message ? e.message : String(e))); } catch (e2) {}
+    }
+  }
+
+  init();
+
+})();
