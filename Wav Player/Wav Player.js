@@ -1,12 +1,7 @@
-// Script by MexrlDev (modified for folder browsing with global cover mirroring music structure)
+// Script by MexrlDev
 // Music goes into /download0/payloads/player/music/ (or USB/music/)
 // Covers can be placed in /download0/payloads/player/cover/Artist/song.png (mirroring music subfolders)
 // Also supports covers in the same folder as the song.
-//
-// FIXED VERSION 2.1:
-// - Single AudioClip reused, but recreated every N songs to avoid native memory leak.
-// - Key debouncing (200ms) to prevent multiple actions per press.
-// - Proper cleanup on restart, mode switch, refresh.
 
 (function () {
   // ==================== DEPENDENCIES ====================
