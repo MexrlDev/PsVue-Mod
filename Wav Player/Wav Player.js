@@ -1,7 +1,12 @@
-// Script by MexrlDev
-// Music goes into /download0/payloads/player/music/foldername/ (or USB/music/)
-// Covers can be placed in /download0/payloads/player/cover/foldername/song.png (mirroring music subfolders)
+// Script by MexrlDev (modified for folder browsing with global cover mirroring music structure)
+// Music goes into /download0/payloads/player/music/ (or USB/music/)
+// Covers can be placed in /download0/payloads/player/cover/Artist/song.png (mirroring music subfolders)
 // Also supports covers in the same folder as the song.
+//
+// FIXED VERSION 2.1:
+// - Single AudioClip reused, but recreated every N songs to avoid native memory leak.
+// - Key debouncing (200ms) to prevent multiple actions per press.
+// - Proper cleanup on restart, mode switch, refresh.
 
 (function () {
   // ==================== DEPENDENCIES ====================
@@ -25,8 +30,8 @@
   var FS_BASE = '/download0/payloads/player/';
   var URL_BASE = 'file:///../download0/payloads/player/';
 
-  var MUSIC_PARENT = 'music';
-  var COVER_PARENT = 'cover';
+  var MUSIC_PARENT = 'music';           // name of the parent folder containing music subfolders
+  var COVER_PARENT = 'cover';           // name of the global cover folder
 
   var DEFAULT_COVER = 'default_cover.png';
   var BG_FOLDER = 'bg/';
@@ -105,7 +110,7 @@
   var playing = false;
   var currentIcon = 1; // 0=prev, 1=play/pause, 2=next
 
-  var audio = null;
+  var audio = null;            // single AudioClip instance
   var coverImageObj = null;
   var playPauseImage = null;
   var iconImages = [];
@@ -153,8 +158,8 @@
   var _hasShownNoFoldersNotification = false;
 
   // ==================== LIST STATE ====================
-  var uiMode = 'list';
-  var listType = 'folders';
+  var uiMode = 'list';           // 'list' or 'player'
+  var listType = 'folders';      // 'folders' or 'songs'
   var selectedListIndex = 0;
   var listScrollOffset = 0;
   var listItemSlots = [];
@@ -162,6 +167,10 @@
   // ==================== KEY DEBOUNCE ====================
   var lastKeyPressTime = 0;
   var KEY_DEBOUNCE_MS = 200;
+
+  // ==================== MEMORY LEAK PREVENTION ====================
+  var songsPlayedCounter = 0;
+  var MAX_SONGS_BEFORE_RECREATE = 5; // recreate audio instance after this many songs
 
   // ==================== HELPERS ====================
   function logMsg(msg) {
@@ -191,6 +200,32 @@
     clearInterval(id);
   }
 
+  // Completely destroy the audio instance and create a new one (forces resource release)
+  function recreateAudio() {
+    if (audio) {
+      try {
+        if (typeof audio.stop === 'function') audio.stop();
+        if (typeof audio.close === 'function') audio.close();
+      } catch (e) {}
+      audio = null;
+    }
+    try {
+      audio = new jsmaf.AudioClip();
+      audio.volume = 0.7;
+      logMsg('AudioClip recreated (memory cleanup)');
+    } catch (e) {
+      logMsg('Failed to recreate AudioClip: ' + e.message);
+    }
+  }
+
+  // Ensure audio instance exists, but also check if we need to recreate it periodically
+  function ensureAudio(forceRecreate) {
+    if (forceRecreate || !audio) {
+      recreateAudio();
+    }
+  }
+
+  // Cleanup audio for mode switch / refresh (stops playback but keeps instance)
   function cleanupAudio() {
     if (audio) {
       try {
@@ -379,6 +414,7 @@
     return dataSize / bytesPerSec;
   }
 
+  // Scan a directory for .wav files (used when building songs inside a folder)
   function scanDirectoryForWavs(path) {
     var files = [];
     var path_addr = mem.malloc(path.length + 1);
@@ -411,6 +447,7 @@
     return files;
   }
 
+  // Scan a directory for immediate subdirectories (used to build folder list)
   function scanDirectoryForSubdirs(path) {
     var dirs = [];
     var path_addr = mem.malloc(path.length + 1);
@@ -473,10 +510,12 @@
     var exts = ['.png', '.jpg', '.jpeg'];
     var baseName = fileNameBase(songPath.substring(songPath.lastIndexOf('/') + 1));
 
+    // Global cover path: replace the first occurrence of '/music/' with '/cover/'
     var musicIdx = songPath.indexOf('/' + MUSIC_PARENT + '/');
     if (musicIdx !== -1) {
       var prefix = songPath.substring(0, musicIdx);
       var suffix = songPath.substring(musicIdx + ('/' + MUSIC_PARENT).length);
+      // Now suffix starts with the folder structure inside music (e.g., '/Artist/song.wav')
       var globalCoverBase = prefix + '/' + COVER_PARENT + suffix.substring(0, suffix.lastIndexOf('/') + 1) + baseName;
       for (var i = 0; i < exts.length; i++) {
         candidates.push(filePathToUrl(globalCoverBase + exts[i]));
@@ -501,9 +540,9 @@
       // USB mode
       if (!is_jailbroken) {
         logMsg('Not jailbroken, USB mode not available.');
-        return [];
+        return [];   // No USB paths
       }
-      // For USB, it.. look for /mnt/usbX/music/
+      // For USB, we look for /mnt/usbX/music/
       for (var i = 0; i <= 7; i++) {
         paths.push('/mnt/usb' + i + '/' + MUSIC_PARENT + '/');
       }
@@ -511,6 +550,8 @@
     return paths;
   }
 
+  // Scan for folders that contain at least one .wav file within the given base paths
+  // (these base paths are the music/ directories)
   function buildFolderListForMode(mode) {
     logMsg('Building folder list for mode: ' + mode);
     var basePaths = getBasePathsForMode(mode);
@@ -522,10 +563,12 @@
       var subdirs = scanDirectoryForSubdirs(base);
       for (var j = 0; j < subdirs.length; j++) {
         var dirName = subdirs[j];
+        // Skip special folders like 'bg', 'cover' if they accidentally appear inside music/
         if (dirName === 'bg' || dirName === 'cover' || dirName === 'Cover' || dirName === 'COVER') {
           continue;
         }
         var fullPath = base + dirName;
+        // Check if this directory contains any .wav files
         var wavs = scanDirectoryForWavs(fullPath);
         if (wavs.length > 0) {
           var key = fullPath;
@@ -548,6 +591,7 @@
     return foldersList;
   }
 
+  // Build song list for a given folder path
   function buildSongListForFolder(folderPath) {
     var files = scanDirectoryForWavs(folderPath);
     var list = [];
@@ -625,6 +669,7 @@
     if (!listItemSlots.length) return;
 
     if (listType === 'folders') {
+      // Show folder list with folder icon
       var numFolders = folders.length;
       for (var i = 0; i < listItemSlots.length; i++) {
         var idx = listScrollOffset + i;
@@ -654,6 +699,7 @@
         }
       }
     } else if (listType === 'songs') {
+      // Show songs with their own cover art
       var numSongs = songList.length;
       for (var i = 0; i < listItemSlots.length; i++) {
         var idx = listScrollOffset + i;
@@ -668,6 +714,7 @@
           slot.durationText.y = UI.list.startY + i * UI.list.itemHeight + 10;
           slot.titleText.text = song.displayName || song.name;
           slot.durationText.text = song.duration;
+          // Load cover (asynchronously)
           loadCoverIntoTarget(idx, slot.coverImg);
           if (idx === selectedListIndex) {
             slot.coverImg.borderColor = 'white';
@@ -820,7 +867,7 @@
     loadCoverForSong(index);
   }
 
-  // Stops playback and closes the current file
+  // Stops playback and closes the current file (keeps audio instance alive)
   function stopAudio() {
     if (audio) {
       try {
@@ -830,18 +877,6 @@
     }
     syncPlayIcon(false);
     stopTimer();
-  }
-
-  // Ensure the audio instance exists
-  function ensureAudio() {
-    if (!audio && typeof jsmaf !== 'undefined' && jsmaf.AudioClip) {
-      try {
-        audio = new jsmaf.AudioClip();
-        audio.volume = 0.7;
-      } catch (e) {
-        logMsg('Failed to create AudioClip: ' + e.message);
-      }
-    }
   }
 
   function syncPlayIcon(isPlaying) {
@@ -935,7 +970,16 @@
   function loadAndPlaySong(index) {
     if (index < 0 || index >= songList.length) return;
 
-    ensureAudio();
+    // Increment counter and check if we need to recreate audio to free memory
+    songsPlayedCounter++;
+    if (songsPlayedCounter >= MAX_SONGS_BEFORE_RECREATE) {
+      songsPlayedCounter = 0;
+      // Recreate the audio instance to force native resources release
+      recreateAudio();
+    } else {
+      ensureAudio(); // make sure audio exists (first run)
+    }
+
     if (!audio) return;
 
     var song = songList[index];
@@ -1447,7 +1491,7 @@
   }
   createListSlots();
 
-  // Create the single AudioClip instance now
+  // Create the initial AudioClip instance
   ensureAudio();
 
   // ==================== KEY HANDLING ====================
@@ -1588,9 +1632,9 @@
       _hasShownNoFoldersNotification = true;
       showModeNotification('No folders with music found');
     }
-    logMsg('No folders found.');
+    logMsg('No folders found. Press SQUARE to refresh.');
     showListMode();
   }
 
-  logMsg('Media player LOADED!');
+  logMsg('Media player ready (music/ + cover/ structure)!!');
 })();
