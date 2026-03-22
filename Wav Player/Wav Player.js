@@ -1,8 +1,7 @@
 // Script by MexrlDev
-// You can use it, mod it, do whatever you want :D its for studying and good experiencing after all!
-
-// player/Music IS THE PATH FOR SONGS, no matter name! just make sure its wav! 
-// player/Cover IS FOR COVER OF THE SONG! MAKE SURE TO NAME THE COVER SAME AS SONG AND THEN YOU CAN REOPEN WAV PLAYER TO SEE IT! type doesnt matter 
+// Music goes into /download0/payloads/player/music/foldername/ (or USB/music/)
+// Covers can be placed in /download0/payloads/player/cover/foldername/song.png (mirroring music subfolders)
+// Also supports covers in the same folder as the song.
 
 (function () {
   // ==================== DEPENDENCIES ====================
@@ -26,8 +25,9 @@
   var FS_BASE = '/download0/payloads/player/';
   var URL_BASE = 'file:///../download0/payloads/player/';
 
-  var MUSIC_FOLDER_NAMES = ['music', 'Music', 'MUSIC'];
-  var COVER_FOLDER_NAMES = ['cover', 'Cover', 'COVER'];
+  var MUSIC_PARENT = 'music';
+  var COVER_PARENT = 'cover';
+
   var DEFAULT_COVER = 'default_cover.png';
   var BG_FOLDER = 'bg/';
   var DEFAULT_BG_NAME = 'bg';
@@ -39,6 +39,7 @@
   var LOOP_IMAGE = 'Loop.png';
   var SHUFFLE_IMAGE = 'Shuffle.png';
   var AUTOPLAY_IMAGE = 'AutoPlay.png';
+  var FOLDER_ICON = 'folder.png';
 
   // ==================== UI LAYOUT ====================
   var UI = {
@@ -97,7 +98,9 @@
 
   // ==================== GLOBAL STATE ====================
   var currentMode = 'ps4';
-  var songList = [];
+  var folders = [];           // list of folder objects { name, path }
+  var currentFolderIndex = -1;
+  var songList = [];          // songs inside the selected folder
   var currentSongIndex = -1;
   var playing = false;
   var currentIcon = 1; // 0=prev, 1=play/pause, 2=next
@@ -147,13 +150,18 @@
   var shuffleBlinkInterval = null;
   var autoPlayBlinkInterval = null;
 
-  var _hasShownNoSongsNotification = false;
+  var _hasShownNoFoldersNotification = false;
 
   // ==================== LIST STATE ====================
   var uiMode = 'list';
+  var listType = 'folders';
   var selectedListIndex = 0;
   var listScrollOffset = 0;
   var listItemSlots = [];
+
+  // ==================== KEY DEBOUNCE ====================
+  var lastKeyPressTime = 0;
+  var KEY_DEBOUNCE_MS = 200;
 
   // ==================== HELPERS ====================
   function logMsg(msg) {
@@ -183,8 +191,24 @@
     clearInterval(id);
   }
 
+  function cleanupAudio() {
+    if (audio) {
+      try {
+        if (typeof audio.stop === 'function') audio.stop();
+        if (typeof audio.close === 'function') audio.close();
+      } catch (e) { logMsg('Error stopping audio: ' + e.message); }
+    }
+    stopTimer();
+    syncPlayIcon(false);
+    playing = false;
+    playbackAnchorMs = 0;
+    pausedAccumulatedMs = 0;
+    lastKnownPlaybackMs = 0;
+  }
+
   function restartApp() {
     logMsg('Restarting application...');
+    cleanupAudio();
     safeSetTimeout(function () {
       if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
         debugging.restart();
@@ -355,7 +379,7 @@
     return dataSize / bytesPerSec;
   }
 
-  function scanDirectory(path) {
+  function scanDirectoryForWavs(path) {
     var files = [];
     var path_addr = mem.malloc(path.length + 1);
     var buf = mem.malloc(4096);
@@ -387,8 +411,40 @@
     return files;
   }
 
+  function scanDirectoryForSubdirs(path) {
+    var dirs = [];
+    var path_addr = mem.malloc(path.length + 1);
+    var buf = mem.malloc(4096);
+
+    writeCString(path_addr, path);
+
+    var fd = fn.open_sys(path_addr, makeBig(0, 0), makeBig(0, 0));
+    if (isFailBigInt(fd)) return dirs;
+
+    var count = fn.getdents(fd, buf, makeBig(0, 4096));
+    if (!isFailBigInt(count) && count.lo > 0) {
+      var offset = 0;
+      while (offset < count.lo) {
+        var d_reclen = mem.view(buf.add(makeBig(0, offset + 4))).getUint16(0, true);
+        var d_type = mem.view(buf.add(makeBig(0, offset + 6))).getUint8(0);
+        var d_namlen = mem.view(buf.add(makeBig(0, offset + 7))).getUint8(0);
+        var name = '';
+        for (var j = 0; j < d_namlen; j++) {
+          name += String.fromCharCode(mem.view(buf.add(makeBig(0, offset + 8 + j))).getUint8(0));
+        }
+        if (d_type === 4 && name !== '.' && name !== '..') {
+          dirs.push(name);
+        }
+        if (!d_reclen || d_reclen <= 0) break;
+        offset += d_reclen;
+      }
+    }
+    fn.close_sys(fd);
+    return dirs;
+  }
+
   function scanBackgrounds() {
-    var files = scanDirectory(FS_BASE + BG_FOLDER);
+    var files = scanDirectoryForWavs(FS_BASE + BG_FOLDER);
     var list = [{ name: DEFAULT_BG_NAME, url: bgAssetUrl(DEFAULT_BG_NAME + '.png') }];
 
     for (var i = 0; i < files.length; i++) {
@@ -409,75 +465,227 @@
     return list;
   }
 
+  // Build cover candidates:
+  // 1) Global cover folder mirroring music structure: replace '/music/' with '/cover/' in the path
+  // 2) Local cover: same folder as the song
   function getCoverCandidates(songPath) {
     var candidates = [];
-    var base = songPath.replace(/\.[^.]+$/, '');
-    var i, ext;
+    var exts = ['.png', '.jpg', '.jpeg'];
+    var baseName = fileNameBase(songPath.substring(songPath.lastIndexOf('/') + 1));
 
-    for (i = 0; i < 3; i++) {
-      ext = (i === 0) ? '.png' : (i === 1 ? '.jpg' : '.jpeg');
-      candidates.push(filePathToUrl(base + ext));
-    }
-
-    var lowerPath = songPath.toLowerCase();
-    var musicIdx = -1;
-    var musicFolderLen = 0;
-
-    for (i = 0; i < MUSIC_FOLDER_NAMES.length; i++) {
-      var token = '/' + MUSIC_FOLDER_NAMES[i].toLowerCase() + '/';
-      var idx = lowerPath.indexOf(token);
-      if (idx !== -1) {
-        musicIdx = idx;
-        musicFolderLen = MUSIC_FOLDER_NAMES[i].length;
-        break;
-      }
-    }
-
+    var musicIdx = songPath.indexOf('/' + MUSIC_PARENT + '/');
     if (musicIdx !== -1) {
       var prefix = songPath.substring(0, musicIdx);
-      var after = songPath.substring(musicIdx + 1 + musicFolderLen + 1);
-      var afterBase = after.replace(/\.[^.]+$/, '');
-
-      for (var c = 0; c < COVER_FOLDER_NAMES.length; c++) {
-        for (var e = 0; e < 3; e++) {
-          ext = (e === 0) ? '.png' : (e === 1 ? '.jpg' : '.jpeg');
-          var coverUrl = prefix + '/' + COVER_FOLDER_NAMES[c] + '/' + afterBase + ext;
-          candidates.push(filePathToUrl(coverUrl));
-        }
+      var suffix = songPath.substring(musicIdx + ('/' + MUSIC_PARENT).length);
+      var globalCoverBase = prefix + '/' + COVER_PARENT + suffix.substring(0, suffix.lastIndexOf('/') + 1) + baseName;
+      for (var i = 0; i < exts.length; i++) {
+        candidates.push(filePathToUrl(globalCoverBase + exts[i]));
       }
+    }
+
+    // Local cover: same folder as the song
+    var localBase = songPath.substring(0, songPath.lastIndexOf('/')) + '/' + baseName;
+    for (var i = 0; i < exts.length; i++) {
+      candidates.push(filePathToUrl(localBase + exts[i]));
     }
 
     return candidates;
   }
 
-  function getScanPathsForMode(mode) {
+  // ==================== FOLDER & SONG SCANNING ====================
+  function getBasePathsForMode(mode) {
     var paths = [];
-    var i, j;
-
     if (mode === 'ps4') {
-      for (i = 0; i < MUSIC_FOLDER_NAMES.length; i++) {
-        paths.push(FS_BASE + MUSIC_FOLDER_NAMES[i]);
-      }
+      paths.push(FS_BASE + MUSIC_PARENT + '/');
     } else {
+      // USB mode
       if (!is_jailbroken) {
-        logMsg('Not jailbroken, cannot scan USB. Falling back to PS4 mode.');
-        currentMode = 'ps4';
-        return getScanPathsForMode('ps4');
+        logMsg('Not jailbroken, USB mode not available.');
+        return [];
       }
-      for (i = 0; i <= 7; i++) {
-        for (j = 0; j < MUSIC_FOLDER_NAMES.length; j++) {
-          paths.push('/mnt/usb' + i + '/' + MUSIC_FOLDER_NAMES[j]);
+      // For USB, it.. look for /mnt/usbX/music/
+      for (var i = 0; i <= 7; i++) {
+        paths.push('/mnt/usb' + i + '/' + MUSIC_PARENT + '/');
+      }
+    }
+    return paths;
+  }
+
+  function buildFolderListForMode(mode) {
+    logMsg('Building folder list for mode: ' + mode);
+    var basePaths = getBasePathsForMode(mode);
+    var folderSet = {};
+    var foldersList = [];
+
+    for (var i = 0; i < basePaths.length; i++) {
+      var base = basePaths[i];
+      var subdirs = scanDirectoryForSubdirs(base);
+      for (var j = 0; j < subdirs.length; j++) {
+        var dirName = subdirs[j];
+        if (dirName === 'bg' || dirName === 'cover' || dirName === 'Cover' || dirName === 'COVER') {
+          continue;
+        }
+        var fullPath = base + dirName;
+        var wavs = scanDirectoryForWavs(fullPath);
+        if (wavs.length > 0) {
+          var key = fullPath;
+          if (!folderSet[key]) {
+            folderSet[key] = true;
+            foldersList.push({
+              name: dirName,
+              path: fullPath
+            });
+          }
         }
       }
     }
 
-    var unique = [];
-    for (var p = 0; p < paths.length; p++) {
-      if (unique.indexOf(paths[p]) === -1) unique.push(paths[p]);
-    }
-    return unique;
+    foldersList.sort(function (a, b) {
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+
+    logMsg('Found ' + foldersList.length + ' music folders');
+    return foldersList;
   }
 
+  function buildSongListForFolder(folderPath) {
+    var files = scanDirectoryForWavs(folderPath);
+    var list = [];
+
+    for (var i = 0; i < files.length; i++) {
+      var fname = files[i];
+      var fullPath = folderPath + '/' + fname;
+      var durationSec = getWavDuration(fullPath);
+      var parsed = parseSongName(fname);
+
+      list.push({
+        name: fname,
+        displayName: parsed.displayName,
+        path: fullPath,
+        duration: formatTime(durationSec),
+        durationSeconds: durationSec,
+        coverCandidates: getCoverCandidates(fullPath),
+        number: parsed.number
+      });
+    }
+
+    list.sort(function (a, b) {
+      var an = (a.displayName || a.name || '').toLowerCase();
+      var bn = (b.displayName || b.name || '').toLowerCase();
+      return an.localeCompare(bn);
+    });
+
+    return list;
+  }
+
+  // ==================== UI UPDATE FUNCTIONS ====================
+  function loadFoldersForMode(mode) {
+    folders = buildFolderListForMode(mode);
+    currentFolderIndex = -1;
+    songList = [];
+    currentSongIndex = -1;
+    listType = 'folders';
+    selectedListIndex = 0;
+    listScrollOffset = 0;
+
+    if (folders.length === 0) {
+      if (!_hasShownNoFoldersNotification) {
+        _hasShownNoFoldersNotification = true;
+        showModeNotification('No folders with music found');
+      }
+      logMsg('No folders found');
+    } else {
+      _hasShownNoFoldersNotification = false;
+    }
+
+    if (uiMode === 'list') {
+      updateListView();
+    }
+  }
+
+  function loadSongsForFolder(folderIndex) {
+    if (folderIndex < 0 || folderIndex >= folders.length) return;
+    var folder = folders[folderIndex];
+    currentFolderIndex = folderIndex;
+    songList = buildSongListForFolder(folder.path);
+    listType = 'songs';
+    selectedListIndex = 0;
+    listScrollOffset = 0;
+
+    if (songList.length === 0) {
+      logMsg('Folder contains no playable songs: ' + folder.name);
+    }
+
+    if (uiMode === 'list') {
+      updateListView();
+    }
+  }
+
+  function updateListView() {
+    if (!listItemSlots.length) return;
+
+    if (listType === 'folders') {
+      var numFolders = folders.length;
+      for (var i = 0; i < listItemSlots.length; i++) {
+        var idx = listScrollOffset + i;
+        var slot = listItemSlots[i];
+        if (idx < numFolders) {
+          var folder = folders[idx];
+          slot.coverImg.visible = true;
+          setImageUrl(slot.coverImg, assetUrl(FOLDER_ICON));
+          slot.coverImg.y = UI.list.startY + i * UI.list.itemHeight;
+          slot.titleText.visible = true;
+          slot.durationText.visible = false;
+          slot.titleText.y = UI.list.startY + i * UI.list.itemHeight + 10;
+          slot.titleText.text = folder.name;
+          if (idx === selectedListIndex) {
+            slot.coverImg.borderColor = 'white';
+            slot.coverImg.borderWidth = 3;
+            slot.titleText.color = 'yellow';
+          } else {
+            slot.coverImg.borderColor = 'transparent';
+            slot.coverImg.borderWidth = 0;
+            slot.titleText.color = 'white';
+          }
+        } else {
+          slot.coverImg.visible = false;
+          slot.titleText.visible = false;
+          slot.durationText.visible = false;
+        }
+      }
+    } else if (listType === 'songs') {
+      var numSongs = songList.length;
+      for (var i = 0; i < listItemSlots.length; i++) {
+        var idx = listScrollOffset + i;
+        var slot = listItemSlots[i];
+        if (idx < numSongs) {
+          var song = songList[idx];
+          slot.coverImg.visible = true;
+          slot.titleText.visible = true;
+          slot.durationText.visible = true;
+          slot.coverImg.y = UI.list.startY + i * UI.list.itemHeight;
+          slot.titleText.y = UI.list.startY + i * UI.list.itemHeight + 10;
+          slot.durationText.y = UI.list.startY + i * UI.list.itemHeight + 10;
+          slot.titleText.text = song.displayName || song.name;
+          slot.durationText.text = song.duration;
+          loadCoverIntoTarget(idx, slot.coverImg);
+          if (idx === selectedListIndex) {
+            slot.coverImg.borderColor = 'white';
+            slot.coverImg.borderWidth = 3;
+          } else {
+            slot.coverImg.borderColor = 'transparent';
+            slot.coverImg.borderWidth = 0;
+          }
+        } else {
+          slot.coverImg.visible = false;
+          slot.titleText.visible = false;
+          slot.durationText.visible = false;
+        }
+      }
+    }
+  }
+
+  // ==================== PLAYER FUNCTIONS ====================
   function clearPendingProbes() {
     liveProbes = [];
   }
@@ -612,26 +820,27 @@
     loadCoverForSong(index);
   }
 
+  // Stops playback and closes the current file
   function stopAudio() {
-    if (audio && typeof audio.stop === 'function') {
-      try { audio.stop(); } catch (e) {}
+    if (audio) {
+      try {
+        if (typeof audio.stop === 'function') audio.stop();
+        if (typeof audio.close === 'function') audio.close();
+      } catch (e) { logMsg('Error stopping audio: ' + e.message); }
     }
-    if (audio && typeof audio.close === 'function') {
-      try { audio.close(); } catch (e2) {}
-    }
-    audio = null;
     syncPlayIcon(false);
     stopTimer();
   }
 
-  function initAudio() {
-    if (audio) return;
-    try {
-      audio = new jsmaf.AudioClip();
-      audio.volume = 0.7;
-    } catch (e) {
-      logMsg('Failed to create AudioClip: ' + e.message);
-      audio = null;
+  // Ensure the audio instance exists
+  function ensureAudio() {
+    if (!audio && typeof jsmaf !== 'undefined' && jsmaf.AudioClip) {
+      try {
+        audio = new jsmaf.AudioClip();
+        audio.volume = 0.7;
+      } catch (e) {
+        logMsg('Failed to create AudioClip: ' + e.message);
+      }
     }
   }
 
@@ -726,30 +935,17 @@
   function loadAndPlaySong(index) {
     if (index < 0 || index >= songList.length) return;
 
-    initAudio();
+    ensureAudio();
     if (!audio) return;
 
     var song = songList[index];
     var url = filePathToUrl(song.path);
 
-    stopAudio();
-    initAudio();
-    if (!audio) return;
+    stopAudio();            // stop and close current file
 
     try {
-      if (typeof audio.open === 'function') {
-        audio.open(url);
-      } else {
-        logMsg('audio.open not available');
-        return;
-      }
-
-      if (typeof audio.play === 'function') {
-        audio.play(true);
-      } else if (typeof audio.resume === 'function') {
-        audio.resume();
-      }
-
+      audio.open(url);
+      audio.play(true);
       syncPlayIcon(true);
       prepareTimerForSongStart();
       loadCoverForSong(index);
@@ -782,141 +978,119 @@
     selectSong((currentSongIndex - 1 + songList.length) % songList.length, true);
   }
 
-  function buildSongListForMode(mode) {
-    logMsg('Loading songs for mode: ' + mode);
-
-    var scanPaths = getScanPathsForMode(mode);
-    var list = [];
-
-    for (var s = 0; s < scanPaths.length; s++) {
-      var path = scanPaths[s];
-      logMsg('Scanning path: ' + path);
-
-      var files = scanDirectory(path);
-      for (var f = 0; f < files.length; f++) {
-        var fname = files[f];
-        var fullPath = path + '/' + fname;
-        var durationSec = getWavDuration(fullPath);
-        var parsed = parseSongName(fname);
-
-        list.push({
-          name: fname,
-          displayName: parsed.displayName,
-          path: fullPath,
-          duration: formatTime(durationSec),
-          durationSeconds: durationSec,
-          coverCandidates: getCoverCandidates(fullPath),
-          number: parsed.number
-        });
-
-        logMsg('Found: ' + fullPath + ' (' + formatTime(durationSec) + ')');
-      }
-    }
-
-    list.sort(function (a, b) {
-      var an = (a.displayName || a.name || '').toLowerCase();
-      var bn = (b.displayName || b.name || '').toLowerCase();
-      return an.localeCompare(bn);
-    });
-
-    return list;
-  }
-
-  function reloadStaticAssets() {
-    loadBackgroundByIndex(currentBgIndex);
-    setImageUrl(prevIcon, assetUrl(ICON_PREV));
-    setImageUrl(nextIcon, assetUrl(ICON_NEXT));
-    syncPlayIcon(playing);
-
-    if (currentSongIndex >= 0 && currentSongIndex < songList.length) {
-      loadCoverForSong(currentSongIndex);
-    } else {
-      loadDefaultCover();
-    }
-  }
-
-  function loadSongsForMode(mode, options) {
-    options = options || {};
-    var preserveSelection = !!options.preserveSelection;
-    var previousPath = null;
-    var previousPlaying = playing;
-
-    if (preserveSelection && currentSongIndex >= 0 && currentSongIndex < songList.length) {
-      previousPath = songList[currentSongIndex].path;
-    }
-
-    var newList = buildSongListForMode(mode);
-    songList = newList;
-    currentMode = mode;
-
-    if (!songList.length) {
-      currentSongIndex = -1;
-      selectedListIndex = 0;
-      listScrollOffset = 0;
-      stopAudio();
-      loadDefaultCover();
-      setTextValue(songNameText, '');
-      setTextValue(songTimeText, '');
-      logMsg('No songs found in mode: ' + mode);
-      if (uiMode === 'list') updateListView();
-      return;
-    }
-
-    var newIndex = 0;
-    if (preserveSelection && previousPath) {
-      for (var i = 0; i < songList.length; i++) {
-        if (songList[i].path === previousPath) {
-          newIndex = i;
-          break;
-        }
-      }
-    }
-
-    currentSongIndex = newIndex;
-    selectedListIndex = newIndex;
-    listScrollOffset = 0;
-
-    if (uiMode === 'player') {
-      updateSongInfoUI(currentSongIndex);
-      if (previousPlaying) {
-        playing = true;
-        loadAndPlaySong(currentSongIndex);
-      } else {
-        stopAudio();
-        syncPlayIcon(false);
-        applyTimerText();
-      }
+  // ==================== MODE SWITCH & REFRESH ====================
+  function switchMode() {
+    cleanupAudio();  // stop playback before switching mode
+    var newMode = (currentMode === 'ps4') ? 'usb' : 'ps4';
+    loadFoldersForMode(newMode);
+    currentMode = newMode;
+    reloadStaticAssets();
+    showModeNotification(newMode === 'ps4' ? 'PS4 Mode' : 'USB Mode');
+    if (uiMode !== 'list') {
+      showListMode();
     } else {
       updateListView();
     }
   }
 
-  function showModeNotification(text) {
-    if (!modeText) return;
+  function refreshSongs() {
+    cleanupAudio();  // stop playback before refreshing
+    logMsg('Refreshing folders and songs...');
 
-    if (modeFadeInterval) {
-      safeClearInterval(modeFadeInterval);
-      modeFadeInterval = null;
+    coverRequestId++;
+    clearPendingProbes();
+
+    bgList = scanBackgrounds();
+    if (!bgList.length) {
+      currentBgIndex = -1;
+    } else if (currentBgIndex >= bgList.length - 1) {
+      currentBgIndex = -1;
     }
 
-    modeText.text = text;
-    modeText.alpha = 1.0;
-    modeText.visible = true;
+    loadFoldersForMode(currentMode);
+    reloadStaticAssets();
+    showModeNotification('Refreshed');
+    if (uiMode !== 'list') {
+      showListMode();
+    } else {
+      updateListView();
+    }
+  }
 
-    var fadeSteps = 10;
-    var step = 0;
+  function togglePlayPause() {
+    if (!songList.length) return;
+    if (currentSongIndex === -1) currentSongIndex = 0;
 
-    modeFadeInterval = safeSetInterval(function () {
-      step++;
-      var newAlpha = 1.0 - (step / fadeSteps);
-      if (newAlpha <= 0) {
-        modeText.visible = false;
-        safeClearInterval(modeFadeInterval);
-        modeFadeInterval = null;
-      } else {
-        modeText.alpha = newAlpha;
-      }
-    }, 100);
+    if (playing) {
+      pauseTimerOnly();
+      stopAudio();
+      return;
+    }
+
+    playing = true;
+    syncPlayIcon(true);
+    loadAndPlaySong(currentSongIndex);
+  }
+
+  // ==================== UI MODE MANAGEMENT ====================
+  function showListMode() {
+    uiMode = 'list';
+    coverImageObj.visible = false;
+    songNameText.visible = false;
+    songTimeText.visible = false;
+    prevIcon.visible = false;
+    playPauseImage.visible = false;
+    nextIcon.visible = false;
+    loopImage.visible = false;
+    shuffleImage.visible = false;
+    autoPlayImage.visible = false;
+    loopStatus.visible = false;
+    shuffleStatus.visible = false;
+    autoPlayStatus.visible = false;
+
+    updateListView();
+  }
+
+  function showPlayerMode(songIndex) {
+    if (songIndex < 0 || songIndex >= songList.length) return;
+    uiMode = 'player';
+    currentSongIndex = songIndex;
+    selectedListIndex = songIndex;
+
+    for (var i = 0; i < listItemSlots.length; i++) {
+      listItemSlots[i].coverImg.visible = false;
+      listItemSlots[i].titleText.visible = false;
+      listItemSlots[i].durationText.visible = false;
+    }
+
+    coverImageObj.visible = true;
+    songNameText.visible = true;
+    songTimeText.visible = true;
+    prevIcon.visible = true;
+    playPauseImage.visible = true;
+    nextIcon.visible = true;
+
+    if (loopEnabled) {
+      loopImage.visible = true;
+      loopStatus.visible = false;
+    } else {
+      loopStatus.visible = true;
+    }
+    if (shuffleEnabled) {
+      shuffleImage.visible = true;
+      shuffleStatus.visible = false;
+    } else {
+      shuffleStatus.visible = true;
+    }
+    if (autoPlayEnabled) {
+      autoPlayImage.visible = true;
+      autoPlayStatus.visible = false;
+    } else {
+      autoPlayStatus.visible = true;
+    }
+
+    updateSongInfoUI(songIndex);
+    loadAndPlaySong(songIndex);
   }
 
   // ==================== BLINKING ====================
@@ -984,217 +1158,45 @@
     }
   }
 
-  // ==================== MODE SWITCH and REFRESH ====================
-  function switchMode() {
-    var newMode = (currentMode === 'ps4') ? 'usb' : 'ps4';
-    loadSongsForMode(newMode, { preserveSelection: false });
-    reloadStaticAssets();
-    showModeNotification(newMode === 'ps4' ? 'PS4 Mode' : 'USB Mode');
-    if (uiMode !== 'list') {
-      showListMode();
-    } else {
-      updateListView();
-    }
-  }
+  function showModeNotification(text) {
+    if (!modeText) return;
 
-  function refreshSongs() {
-    logMsg('Refreshing song list...');
-
-    stopAudio();
-    playing = false;
-    syncPlayIcon(false);
-    stopTimer();
-    playbackAnchorMs = 0;
-    pausedAccumulatedMs = 0;
-    lastKnownPlaybackMs = 0;
-
-    coverRequestId++;
-    clearPendingProbes();
-
-    bgList = scanBackgrounds();
-    if (!bgList.length) {
-      currentBgIndex = -1;
-    } else if (currentBgIndex >= bgList.length - 1) {
-      currentBgIndex = -1;
+    if (modeFadeInterval) {
+      safeClearInterval(modeFadeInterval);
+      modeFadeInterval = null;
     }
 
-    loadSongsForMode(currentMode, { preserveSelection: true });
-    reloadStaticAssets();
-    showModeNotification('Refreshed');
-    if (uiMode !== 'list') {
-      showListMode();
-    } else {
-      updateListView();
-    }
-  }
+    modeText.text = text;
+    modeText.alpha = 1.0;
+    modeText.visible = true;
 
-  function togglePlayPause() {
-    if (!songList.length) return;
-    if (currentSongIndex === -1) currentSongIndex = 0;
+    var fadeSteps = 10;
+    var step = 0;
 
-    if (playing) {
-      pauseTimerOnly();
-      stopAudio();
-      return;
-    }
-
-    playing = true;
-    syncPlayIcon(true);
-    loadAndPlaySong(currentSongIndex);
-  }
-
-  // ==================== LIST VIEW FUNCTIONS ====================
-  function createListSlots() {
-    for (var i = 0; i < UI.list.visibleCount; i++) {
-      var y = UI.list.startY + i * UI.list.itemHeight;
-
-      var cover = new Image({
-        url: assetUrl(DEFAULT_COVER),
-        x: UI.list.startX,
-        y: y,
-        width: UI.list.coverSize,
-        height: UI.list.coverSize,
-        visible: false
-      });
-      jsmaf.root.children.push(cover);
-
-      var title = new jsmaf.Text();
-      title.style = 'whiteSmall';
-      title.x = UI.list.titleX;
-      title.y = y + 10;
-      title.text = '';
-      title.visible = false;
-      jsmaf.root.children.push(title);
-
-      var duration = new jsmaf.Text();
-      duration.style = 'whiteSmall';
-      duration.x = 1920 - UI.list.durationRightOffset;
-      duration.y = y + 10;
-      duration.text = '';
-      duration.visible = false;
-      jsmaf.root.children.push(duration);
-
-      listItemSlots.push({
-        coverImg: cover,
-        titleText: title,
-        durationText: duration
-      });
-    }
-  }
-
-  function updateListView() {
-    if (!songList.length) {
-      for (var i = 0; i < listItemSlots.length; i++) {
-        listItemSlots[i].coverImg.visible = false;
-        listItemSlots[i].titleText.visible = false;
-        listItemSlots[i].durationText.visible = false;
-      }
-      return;
-    }
-
-    if (selectedListIndex < 0) selectedListIndex = 0;
-    if (selectedListIndex >= songList.length) selectedListIndex = songList.length - 1;
-
-    if (selectedListIndex < listScrollOffset) {
-      listScrollOffset = selectedListIndex;
-    } else if (selectedListIndex >= listScrollOffset + UI.list.visibleCount) {
-      listScrollOffset = selectedListIndex - UI.list.visibleCount + 1;
-    }
-    var maxOffset = Math.max(0, songList.length - UI.list.visibleCount);
-    if (listScrollOffset > maxOffset) listScrollOffset = maxOffset;
-    if (listScrollOffset < 0) listScrollOffset = 0;
-
-    for (var i = 0; i < listItemSlots.length; i++) {
-      var songIndex = listScrollOffset + i;
-      var slot = listItemSlots[i];
-      if (songIndex < songList.length) {
-        var song = songList[songIndex];
-        slot.coverImg.visible = true;
-        slot.titleText.visible = true;
-        slot.durationText.visible = true;
-
-        slot.coverImg.y = UI.list.startY + i * UI.list.itemHeight;
-        slot.titleText.y = UI.list.startY + i * UI.list.itemHeight + 10;
-        slot.durationText.y = UI.list.startY + i * UI.list.itemHeight + 10;
-
-        slot.titleText.text = song.displayName || song.name;
-        slot.durationText.text = song.duration;
-
-        loadCoverIntoTarget(songIndex, slot.coverImg);
-
-        if (songIndex === selectedListIndex) {
-          slot.coverImg.borderColor = 'white';
-          slot.coverImg.borderWidth = 3;
-        } else {
-          slot.coverImg.borderColor = 'transparent';
-          slot.coverImg.borderWidth = 0;
-        }
+    modeFadeInterval = safeSetInterval(function () {
+      step++;
+      var newAlpha = 1.0 - (step / fadeSteps);
+      if (newAlpha <= 0) {
+        modeText.visible = false;
+        safeClearInterval(modeFadeInterval);
+        modeFadeInterval = null;
       } else {
-        slot.coverImg.visible = false;
-        slot.titleText.visible = false;
-        slot.durationText.visible = false;
+        modeText.alpha = newAlpha;
       }
-    }
+    }, 100);
   }
 
-  function showListMode() {
-    uiMode = 'list';
-    coverImageObj.visible = false;
-    songNameText.visible = false;
-    songTimeText.visible = false;
-    prevIcon.visible = false;
-    playPauseImage.visible = false;
-    nextIcon.visible = false;
-    loopImage.visible = false;
-    shuffleImage.visible = false;
-    autoPlayImage.visible = false;
-    loopStatus.visible = false;
-    shuffleStatus.visible = false;
-    autoPlayStatus.visible = false;
+  function reloadStaticAssets() {
+    loadBackgroundByIndex(currentBgIndex);
+    setImageUrl(prevIcon, assetUrl(ICON_PREV));
+    setImageUrl(nextIcon, assetUrl(ICON_NEXT));
+    syncPlayIcon(playing);
 
-    updateListView();
-  }
-
-  function showPlayerMode(songIndex) {
-    if (songIndex < 0 || songIndex >= songList.length) return;
-    uiMode = 'player';
-    currentSongIndex = songIndex;
-    selectedListIndex = songIndex;
-
-    for (var i = 0; i < listItemSlots.length; i++) {
-      listItemSlots[i].coverImg.visible = false;
-      listItemSlots[i].titleText.visible = false;
-      listItemSlots[i].durationText.visible = false;
-    }
-
-    coverImageObj.visible = true;
-    songNameText.visible = true;
-    songTimeText.visible = true;
-    prevIcon.visible = true;
-    playPauseImage.visible = true;
-    nextIcon.visible = true;
-
-    if (loopEnabled) {
-      loopImage.visible = true;
-      loopStatus.visible = false;
+    if (currentSongIndex >= 0 && currentSongIndex < songList.length) {
+      loadCoverForSong(currentSongIndex);
     } else {
-      loopStatus.visible = true;
+      loadDefaultCover();
     }
-    if (shuffleEnabled) {
-      shuffleImage.visible = true;
-      shuffleStatus.visible = false;
-    } else {
-      shuffleStatus.visible = true;
-    }
-    if (autoPlayEnabled) {
-      autoPlayImage.visible = true;
-      autoPlayStatus.visible = false;
-    } else {
-      autoPlayStatus.visible = true;
-    }
-
-    updateSongInfoUI(songIndex);
-    loadAndPlaySong(songIndex);
   }
 
   // ==================== UI SETUP ====================
@@ -1289,6 +1291,7 @@
   preloadImage(assetUrl(LOOP_IMAGE));
   preloadImage(assetUrl(SHUFFLE_IMAGE));
   preloadImage(assetUrl(AUTOPLAY_IMAGE));
+  preloadImage(assetUrl(FOLDER_ICON));
 
   function updateIconHighlight() {
     for (var i = 0; i < iconImages.length; i++) {
@@ -1405,37 +1408,115 @@
   });
   jsmaf.root.children.push(autoPlayImage);
 
+  function createListSlots() {
+    for (var i = 0; i < UI.list.visibleCount; i++) {
+      var y = UI.list.startY + i * UI.list.itemHeight;
+
+      var cover = new Image({
+        url: assetUrl(DEFAULT_COVER),
+        x: UI.list.startX,
+        y: y,
+        width: UI.list.coverSize,
+        height: UI.list.coverSize,
+        visible: false
+      });
+      jsmaf.root.children.push(cover);
+
+      var title = new jsmaf.Text();
+      title.style = 'whiteSmall';
+      title.x = UI.list.titleX;
+      title.y = y + 10;
+      title.text = '';
+      title.visible = false;
+      jsmaf.root.children.push(title);
+
+      var duration = new jsmaf.Text();
+      duration.style = 'whiteSmall';
+      duration.x = 1920 - UI.list.durationRightOffset;
+      duration.y = y + 10;
+      duration.text = '';
+      duration.visible = false;
+      jsmaf.root.children.push(duration);
+
+      listItemSlots.push({
+        coverImg: cover,
+        titleText: title,
+        durationText: duration
+      });
+    }
+  }
   createListSlots();
+
+  // Create the single AudioClip instance now
+  ensureAudio();
 
   // ==================== KEY HANDLING ====================
   jsmaf.onKeyDown = function (keyCode) {
+    // Debounce key presses
+    var now = Date.now();
+    if (now - lastKeyPressTime < KEY_DEBOUNCE_MS) return;
+    lastKeyPressTime = now;
+
     logMsg('Key pressed: ' + keyCode);
 
     if (uiMode === 'list') {
-      if (keyCode === KEY_UP) {
-        if (songList.length) {
-          selectedListIndex = (selectedListIndex - 1 + songList.length) % songList.length;
+      if (listType === 'folders') {
+        if (keyCode === KEY_UP) {
+          if (folders.length) {
+            selectedListIndex = (selectedListIndex - 1 + folders.length) % folders.length;
+            updateListView();
+          }
+          return;
+        }
+        if (keyCode === KEY_DOWN) {
+          if (folders.length) {
+            selectedListIndex = (selectedListIndex + 1) % folders.length;
+            updateListView();
+          }
+          return;
+        }
+        if (keyCode === KEY_ENTER) {
+          if (folders.length) {
+            loadSongsForFolder(selectedListIndex);
+            updateListView();
+          }
+          return;
+        }
+        if (keyCode === KEY_BACK) {
+          restartApp();
+          return;
+        }
+      } else if (listType === 'songs') {
+        if (keyCode === KEY_UP) {
+          if (songList.length) {
+            selectedListIndex = (selectedListIndex - 1 + songList.length) % songList.length;
+            updateListView();
+          }
+          return;
+        }
+        if (keyCode === KEY_DOWN) {
+          if (songList.length) {
+            selectedListIndex = (selectedListIndex + 1) % songList.length;
+            updateListView();
+          }
+          return;
+        }
+        if (keyCode === KEY_ENTER) {
+          if (songList.length) {
+            showPlayerMode(selectedListIndex);
+          }
+          return;
+        }
+        if (keyCode === KEY_BACK) {
+          listType = 'folders';
+          selectedListIndex = currentFolderIndex;
+          if (selectedListIndex < 0) selectedListIndex = 0;
+          if (selectedListIndex >= folders.length) selectedListIndex = 0;
           updateListView();
+          return;
         }
-        return;
       }
-      if (keyCode === KEY_DOWN) {
-        if (songList.length) {
-          selectedListIndex = (selectedListIndex + 1) % songList.length;
-          updateListView();
-        }
-        return;
-      }
-      if (keyCode === KEY_ENTER) {
-        if (songList.length) {
-          showPlayerMode(selectedListIndex);
-        }
-        return;
-      }
-      if (keyCode === KEY_BACK) {
-        restartApp();
-        return;
-      }
+
       if (keyCode === KEY_MODE) {
         switchMode();
         return;
@@ -1444,7 +1525,6 @@
         refreshSongs();
         return;
       }
-      // Loop, Shuffle, AutoPlay ignored in list mode
     } else { // player mode
       if (keyCode === KEY_LEFT) {
         currentIcon = (currentIcon - 1 + 3) % 3;
@@ -1497,20 +1577,20 @@
   };
 
   // ==================== INITIAL LOAD ====================
-  loadSongsForMode(currentMode, { preserveSelection: false });
+  loadFoldersForMode(currentMode);
   reloadStaticAssets();
 
-  if (songList.length) {
+  if (folders.length) {
     selectedListIndex = 0;
     showListMode();
   } else {
-    if (!_hasShownNoSongsNotification) {
-      _hasShownNoSongsNotification = true;
-      showModeNotification('No songs found');
+    if (!_hasShownNoFoldersNotification) {
+      _hasShownNoFoldersNotification = true;
+      showModeNotification('No folders with music found');
     }
-    logMsg('No songs found. Press SQUARE to refresh.');
+    logMsg('No folders found.');
     showListMode();
   }
 
-  logMsg('Media player ready!!');
+  logMsg('Media player LOADED!');
 })();
