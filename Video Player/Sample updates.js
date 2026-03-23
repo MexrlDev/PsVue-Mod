@@ -3,7 +3,7 @@
 // Open source for everyone to use, learn from, and enjoy.
 
 (function () {
-  log('=== Enhanced Local Video Server ===');
+  log('=== Ultimate Local Video Server ===');
 
   if (typeof stopBgm === 'function') {
     try { stopBgm(); } catch (e) {}
@@ -30,31 +30,33 @@
 
   var socket_sys      = fn.socket;
   var bind_sys        = fn.bind;
-  var setsockopt_sys   = fn.setsockopt;
-  var listen_sys       = fn.listen;
-  var accept_sys       = fn.accept;
-  var getsockname_sys  = fn.getsockname;
-  var read_sys         = fn.read_sys;
-  var write_sys        = fn.write_sys;
-  var close_sys        = fn.close_sys;
-  var open_sys         = fn.open_sys;
-  var select_sys       = fn.select;
-  var shutdown_sys     = fn.shutdown;
+  var setsockopt_sys  = fn.setsockopt;
+  var listen_sys      = fn.listen;
+  var accept_sys      = fn.accept;
+  var getsockname_sys = fn.getsockname;
+  var read_sys        = fn.read_sys;
+  var write_sys       = fn.write_sys;
+  var close_sys       = fn.close_sys;
+  var open_sys        = fn.open_sys;
+  var select_sys      = fn.select;
+  var shutdown_sys    = fn.shutdown;
 
   var AF_INET      = 2;
-  var SOCK_STREAM   = 1;
-  var SOL_SOCKET    = 0xFFFF;
-  var SO_REUSEADDR  = 0x4;
-  var O_RDONLY      = 0;
+  var SOCK_STREAM  = 1;
+  var SOL_SOCKET   = 0xFFFF;
+  var SO_REUSEADDR = 0x4;
+  var O_RDONLY     = 0;
 
   // ===== CONFIGURATION =====
-  var VIDEO_BASE_NAME = 'Hehe';
+  var VIDEO_BASE_NAME = 'Work';
   var VIDEO_DIR = '/download0/payloads/vid';
   var SCREEN_W = 1920;
   var SCREEN_H = 1080;
-  var CHUNK_SIZE = 262144;
+  var CHUNK_SIZE = 262144;          // 256KB – optimal for high‑bitrate streams
+  var WATCHDOG_INTERVAL = 5000;     // check video state every 5 seconds
   // =========================
 
+  // ----- Helper functions -----
   function read_bigint(v) {
     if (v === null || v === undefined) return -1;
     if (typeof v === 'number') return v;
@@ -65,7 +67,7 @@
 
   function safeFree(p) {
     try {
-      if (typeof mem !== 'undefined' && mem && typeof mem.free === 'function' && p) {
+      if (p && typeof mem !== 'undefined' && mem && typeof mem.free === 'function') {
         mem.free(p);
       }
     } catch (e) {}
@@ -130,6 +132,7 @@
     if (p.indexOf('.mov') >= 0) return 'video/quicktime';
     if (p.indexOf('.avi') >= 0) return 'video/x-msvideo';
     if (p.indexOf('.mkv') >= 0) return 'video/x-matroska';
+    if (p.indexOf('.webm') >= 0) return 'video/webm';
     return 'application/octet-stream';
   }
 
@@ -208,6 +211,7 @@
     }
   }
 
+  // Get file size by reading whole file
   function get_file_size(fd) {
     var tmp = mem.malloc(65536);
     var total = 0;
@@ -224,6 +228,7 @@
     return total;
   }
 
+  // Send file with optional Range support
   function send_file(fd, filepath, range) {
     var path_buf = 0;
     var file_fd = -1;
@@ -240,6 +245,7 @@
       var file_size = get_file_size(file_fd);
       close_sys(file_fd);
 
+      // Reopen for actual reading
       file_fd = open_sys(path_buf, new BigInt(0, O_RDONLY), new BigInt(0, 0));
       if (read_bigint(file_fd) < 0) {
         log('Cannot reopen file: ' + filepath);
@@ -264,6 +270,7 @@
         status = '206 Partial Content';
         extra_headers = ['Content-Range: bytes ' + start + '-' + end + '/' + file_size];
 
+        // Seek to start by reading and discarding
         var skip_buf = mem.malloc(65536);
         var remaining = start;
         while (remaining > 0) {
@@ -303,6 +310,7 @@
     }
   }
 
+  // Resolve request path to disk file (handles .m3u8 ↔ .m3u mapping)
   function resolve_path(request_path) {
     var safe = (request_path.charAt(0) === '/') ? request_path.substring(1) : request_path;
     if (safe === '' || safe === '/') return { kind: 'root' };
@@ -326,18 +334,98 @@
     return { kind: 'file', path: VIDEO_DIR + '/' + safe };
   }
 
-  var playlist_m3u8 = VIDEO_DIR + '/' + VIDEO_BASE_NAME + '.m3u8';
-  var playlist_m3u   = VIDEO_DIR + '/' + VIDEO_BASE_NAME + '.m3u';
+  // ----- Setup video element -----
+  jsmaf.root.children.length = 0;
 
-  if (file_exists(playlist_m3u8)) {
-    log('Disk playlist found: ' + playlist_m3u8);
-  } else if (file_exists(playlist_m3u)) {
-    log('Disk playlist found: ' + playlist_m3u + ' (served as .m3u8)');
-  } else {
-    log('No playlist found on disk yet. Public URL still uses .m3u8.');
+  var video = new Video({
+    x: 0,
+    y: 0,
+    width: SCREEN_W,
+    height: SCREEN_H,
+    visible: true,
+    autoplay: true,
+    preload: 'auto',           // Start buffering immediately
+    scaleMode: 'aspectFill'    // Fill screen without black bars
+  });
+  jsmaf.root.children.push(video);
+
+  // ----- Video event handlers with watchdog -----
+  var videoErrorCount = 0;
+  var lastVideoState = null;
+  var videoWatchdog = null;
+
+  function clearWatchdog() {
+    if (videoWatchdog) {
+      if (typeof clearInterval === 'function') clearInterval(videoWatchdog);
+      else if (typeof jsmaf !== 'undefined' && jsmaf.clearInterval) jsmaf.clearInterval(videoWatchdog);
+      videoWatchdog = null;
+    }
   }
 
-  log('Creating HTTP server for video files...');
+  function startWatchdog() {
+    clearWatchdog();
+    // Periodically check if video is still playing
+    var checkState = function () {
+      try {
+        if (!video || !video.duration) return;
+        var currentState = video.state; // assume state property exists
+        if (currentState === 'error' || (currentState === 'stopped' && videoErrorCount > 0)) {
+          log('Watchdog: video in error state, restarting...');
+          restartVideo();
+        } else if (currentState === 'stopped' && video.duration > 0 && video.currentTime < video.duration - 1) {
+          // Stopped before the end – possibly a glitch, restart
+          log('Watchdog: video stopped prematurely, restarting...');
+          restartVideo();
+        }
+      } catch (e) {
+        log('Watchdog error: ' + e);
+      }
+    };
+
+    if (typeof setInterval === 'function') {
+      videoWatchdog = setInterval(checkState, WATCHDOG_INTERVAL);
+    } else if (typeof jsmaf !== 'undefined' && jsmaf.setInterval) {
+      videoWatchdog = jsmaf.setInterval(checkState, WATCHDOG_INTERVAL);
+    } else {
+      // fallback: use onEnterFrame for watchdog
+      var frameCount = 0;
+      var originalOnEnterFrame = jsmaf.onEnterFrame;
+      jsmaf.onEnterFrame = function () {
+        if (originalOnEnterFrame) originalOnEnterFrame();
+        frameCount++;
+        if (frameCount % (WATCHDOG_INTERVAL / 16.7) < 1) {
+          checkState();
+        }
+      };
+    }
+  }
+
+  video.onOpen = function () {
+    log('Video opened. Duration: ' + video.duration);
+    videoErrorCount = 0;
+    startWatchdog();
+  };
+
+  video.onerror = function (err) {
+    log('Video error: ' + JSON.stringify(err));
+    videoErrorCount++;
+    if (videoErrorCount > 3) {
+      log('Too many errors, restarting app...');
+      restartApp();
+    } else {
+      restartVideo();
+    }
+  };
+
+  video.onstatechange = function (state) {
+    log('Video state: ' + state);
+    lastVideoState = state;
+    if (state === 'error') {
+      videoErrorCount++;
+    }
+  };
+
+  // ----- HTTP Server -----
   var srv = socket_sys(new BigInt(0, AF_INET), new BigInt(0, SOCK_STREAM), new BigInt(0, 0));
   if (read_bigint(srv) < 0) throw new Error('Cannot create socket');
 
@@ -374,87 +462,12 @@
   }
 
   log('HTTP server listening on port ' + port);
-
   var videoUrl = 'http://127.0.0.1:' + port + '/' + VIDEO_BASE_NAME + '.m3u8';
   log('Video URL: ' + videoUrl);
 
-  jsmaf.root.children.length = 0;
-
-  var video = new Video({
-    x: 0,
-    y: 0,
-    width: SCREEN_W,
-    height: SCREEN_H,
-    visible: true,
-    autoplay: true
-  });
-  jsmaf.root.children.push(video);
-
-  video.onOpen = function () {
-    try { log('Video opened. Duration: ' + video.duration); } catch (e) {}
-  };
-
-  video.onerror = function (err) {
-    try { log('Video error: ' + JSON.stringify(err)); } catch (e) {}
-  };
-
-  video.onstatechange = function (state) {
-    try { log('Video state: ' + state); } catch (e) {}
-  };
-
+  // ----- Server loop variables -----
   var serverRunning = true;
   var restartPending = false;
-
-  function restartVideo() {
-    log('Restarting video...');
-    try { video.close(); } catch (e) {}
-    try { video.open(videoUrl); } catch (e) {}
-  }
-
-  function restartApp() {
-    if (restartPending) return;
-    restartPending = true;
-
-    log('Restarting application...');
-    serverRunning = false;
-
-    try { shutdown_sys(srv, new BigInt(0, 2)); } catch (e) {}
-    try { close_sys(srv); } catch (e) {}
-    try { video.close(); } catch (e) {}
-
-    jsmaf.onEnterFrame = null;
-    jsmaf.onKeyDown = null;
-
-    var safeSetTimeout = function (callback, delay) {
-      if (typeof setTimeout !== 'undefined') {
-        setTimeout(callback, delay);
-      } else if (typeof jsmaf !== 'undefined' && jsmaf && typeof jsmaf.setTimeout === 'function') {
-        jsmaf.setTimeout(callback, delay);
-      } else {
-        callback();
-      }
-    };
-
-    safeSetTimeout(function () {
-      if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
-        debugging.restart();
-        return;
-      }
-
-      if (typeof jsmaf !== 'undefined' && jsmaf && typeof jsmaf.restart === 'function') {
-        jsmaf.restart();
-        return;
-      }
-
-      if (typeof location !== 'undefined' && location && typeof location.reload === 'function') {
-        location.reload();
-        return;
-      }
-
-      log('Restart method not available.');
-    }, 100);
-  }
-
   var readfds = mem.malloc(128);
   var timeout = mem.malloc(16);
 
@@ -475,6 +488,7 @@
     var req_buf = 0;
 
     try {
+      // Clear readfds
       for (var i = 0; i < 128; i++) {
         mem.view(readfds).setUint8(i, 0);
       }
@@ -539,6 +553,59 @@
     }
   }
 
+  // ----- Control functions -----
+  function restartVideo() {
+    log('Restarting video...');
+    try { video.close(); } catch (e) {}
+    try { video.open(videoUrl); } catch (e) {}
+  }
+
+  function restartApp() {
+    if (restartPending) return;
+    restartPending = true;
+
+    log('Restarting application...');
+    serverRunning = false;
+    clearWatchdog();
+
+    try { shutdown_sys(srv, new BigInt(0, 2)); } catch (e) {}
+    try { close_sys(srv); } catch (e) {}
+    try { video.close(); } catch (e) {}
+
+    jsmaf.onEnterFrame = null;
+    jsmaf.onKeyDown = null;
+
+    var safeSetTimeout = function (callback, delay) {
+      if (typeof setTimeout !== 'undefined') {
+        setTimeout(callback, delay);
+      } else if (typeof jsmaf !== 'undefined' && jsmaf && typeof jsmaf.setTimeout === 'function') {
+        jsmaf.setTimeout(callback, delay);
+      } else {
+        callback();
+      }
+    };
+
+    safeSetTimeout(function () {
+      if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
+        debugging.restart();
+        return;
+      }
+
+      if (typeof jsmaf !== 'undefined' && jsmaf && typeof jsmaf.restart === 'function') {
+        jsmaf.restart();
+        return;
+      }
+
+      if (typeof location !== 'undefined' && location && typeof location.reload === 'function') {
+        location.reload();
+        return;
+      }
+
+      log('Restart method not available.');
+    }, 100);
+  }
+
+  // ----- Attach event handlers -----
   jsmaf.onEnterFrame = serverLoop;
   jsmaf.onKeyDown = function (keyCode) {
     if (keyCode === 14) {
