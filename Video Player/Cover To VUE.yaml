@@ -1,0 +1,98 @@
+name: Convert Video to HLS
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_file:
+        description: "Repo-relative path to the source video (.mp4 or .mov), e.g. videos/sample.mov"
+        required: true
+        type: string
+      output_name:
+        description: "Base name for the output playlist/segments, e.g. cat-meow"
+        required: false
+        default: cat-meow
+        type: string
+      hls_time:
+        description: "HLS segment length in seconds"
+        required: false
+        default: "4"
+        type: string
+
+jobs:
+  build-hls:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg and Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg python3
+
+      - name: Validate input file
+        env:
+          INPUT_FILE: ${{ github.event.inputs.input_file }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          input_file = os.environ["INPUT_FILE"]
+          if not os.path.isfile(input_file):
+              raise SystemExit(f"Input file not found: {input_file}")
+
+          ext = os.path.splitext(input_file)[1].lower()
+          if ext not in {".mp4", ".mov"}:
+              raise SystemExit("Only .mp4 and .mov files are supported")
+
+          print(f"Using input file: {input_file}")
+          PY
+
+      - name: Convert video to HLS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INPUT_FILE="${{ github.event.inputs.input_file }}"
+          OUTPUT_NAME="${{ github.event.inputs.output_name }}"
+          HLS_TIME="${{ github.event.inputs.hls_time }}"
+          OUT_DIR="dist/${OUTPUT_NAME}"
+
+          mkdir -p "$OUT_DIR"
+
+          ffmpeg -y -i "$INPUT_FILE" \
+            -c:v libx264 -preset veryfast -profile:v main -crf 20 \
+            -c:a aac -b:a 128k -ac 2 \
+            -start_number 0 \
+            -hls_time "$HLS_TIME" \
+            -hls_playlist_type vod \
+            -hls_segment_filename "$OUT_DIR/${OUTPUT_NAME}%d.ts" \
+            "$OUT_DIR/${OUTPUT_NAME}.m3u8"
+
+      - name: Zip output folder
+        run: |
+          python3 - <<'PY'
+          import os
+          import zipfile
+
+          output_name = "${{ github.event.inputs.output_name }}"
+          out_dir = os.path.join("dist", output_name)
+          zip_path = os.path.join("dist", f"{output_name}.zip")
+
+          with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+              for root, _, files in os.walk(out_dir):
+                  for file in files:
+                      full_path = os.path.join(root, file)
+                      arc_name = os.path.relpath(full_path, "dist")
+                      zf.write(full_path, arcname=arc_name)
+
+          print(f"Created {zip_path}")
+          PY
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hls-video-zip
+          path: dist/*.zip
