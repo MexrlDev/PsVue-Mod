@@ -1,0 +1,299 @@
+# Syscall Names
+1 exit Terminate the calling process.
+2 fork Create a child process.
+3 read Read from a file descriptor.
+4 write Write to a file descriptor.
+5 open Open a file.
+6 close Close a file descriptor.
+7 wait4 Wait for process termination (with options).
+10 unlink Delete a file.
+12 chdir Change current working directory.
+15 chmod Change file permissions.
+20 getpid Get process ID.
+23 setuid Set user ID.
+24 getuid Get user ID.
+25 geteuid Get effective user ID.
+27 recvmsg Receive a message from a socket.
+28 sendmsg Send a message to a socket.
+29 recvfrom Receive a datagram from a socket.
+30 accept Accept a connection on a socket.
+31 getpeername Get socket peer name.
+32 getsockname Get socket name.
+33 access Check file access permissions.
+34 chflags Change file flags.
+35 fchflags Change file flags on an open file.
+36 sync Schedule file system sync.
+37 kill Send signal to a process.
+39 getppid Get parent process ID.
+41 dup Duplicate a file descriptor.
+42 pipe Create a pipe.
+43 getegid Get effective group ID.
+44 profil Execution time profile.
+47 getgid Get real group ID.
+49 reboot Reboot system.
+50 mmap (old) Map files/devices into memory (old version).
+53 sigpending Examine pending signals.
+54 ioctl Device control operation.
+55 sigreturn Return from signal handler.
+56 sigprocmask Examine/change blocked signals.
+59 execve Execute a program.
+65 truncate Truncate a file to a specified length.
+73 munmap Unmap a mapped region.
+74 mprotect Change protection of mapped region.
+75 madvise Advise system about memory usage.
+78 getdirentries Read directory entries (old).
+79 statfs Get file system statistics.
+80 fstatfs Get file system statistics for an open file.
+83 getrlimit Get resource limits.
+86 lseek Reposition file offset.
+89 sysarch Architecture‑specific system call.
+90 dup2 Duplicate a file descriptor to a specific number.
+92 fcntl File control.
+93 select Synchronous I/O multiplexing.
+95 fsync Synchronise a file's in‑core state with storage.
+96 setpriority Set process priority.
+97 socket Create a socket.
+98 connect Connect a socket.
+99 netcontrol PS4 specific: NetControl – manages network event queues (used in the exploit).
+100 getpriority Get process priority.
+101 send Send data on a socket.
+102 recv Receive data from a socket.
+104 bind Bind a name to a socket.
+105 setsockopt Set socket options.
+106 listen Listen for connections on a socket.
+113 gettimeofday Get current time.
+114 getrusage Get resource usage.
+116 __sysctl Get/set system information.
+117 umask Set file creation mask.
+118 getsockopt Get socket options.
+120 readv Read data into multiple buffers.
+121 writev Write data from multiple buffers.
+122 settimeofday Set current time.
+124 setlogin Set login name.
+125 getlogin Get login name.
+126 acct Enable/disable process accounting.
+127 sigaltstack Set/Get signal stack context.
+128 rename Rename a file.
+131 flock Apply/remove an advisory lock on a file.
+133 munlockall Unlock all mapped memory.
+134 shutdown Shut down part of a full‑duplex connection.
+135 socketpair Create a pair of connected sockets.
+136 mkdir Create a directory.
+137 rmdir Remove a directory.
+138 utimes Change file access/modification times.
+140 adjtime Correct system time.
+141 setsid Create a new session.
+147 quotactl Manipulate disk quotas.
+165 nfssvc NFS daemon service.
+182 getgroups Get supplementary group list.
+183 setgroups Set supplementary group list.
+188 stat Get file status.
+189 lstat Get file status (symlink aware).
+190 fstat Get file status for an open file.
+191 getpeername (old?) (Duplicate of 31)
+192 getsockname (old?) (Duplicate of 32)
+194 getrlimit (old?) (Duplicate of 83)
+195 setrlimit Set resource limits.
+196 getrusage (old?) (Duplicate of 114)
+202 sysctl Get/set system information.
+203 mlock Lock a region of mapped memory.
+204 munlock Unlock a region of mapped memory.
+206 fchmod Change file permissions on an open file.
+209 fpathconf Get configuration values for an open file.
+232 sched_yield Yield the processor.
+233 sched_get_priority_max Get max priority for a scheduling policy.
+234 sched_get_priority_min Get min priority for a scheduling policy.
+235 sched_rr_get_interval Get round‑robin interval.
+236 sched_setparam Set scheduling parameters.
+237 sched_getparam Get scheduling parameters.
+238 sched_setscheduler Set scheduling policy.
+239 sched_getscheduler Get scheduling policy.
+240 nanosleep High‑resolution sleep.
+251 unknown (possibly swapcontext) Context switching (used in threads).
+253 unknown (maybe thr_suspend) Thread suspend.
+272 getdents Get directory entries (new).
+289 wait6 Wait for process/thread termination (new).
+290 thr_create Create a kernel thread (old).
+310 statvfs Get file system statistics (new).
+315 kldload Load a kernel module.
+324 kldstat Get kernel module status.
+325 kldunload Unload a kernel module.
+327 kldfind Find a kernel module by name.
+328 kldnext Get next kernel module ID.
+329 kldstat (old?) (Duplicate of 324)
+330 kldfirstmod Get first module ID.
+331 sched_yield (old?) (Duplicate of 232)
+332 kldsym Lookup symbol in kernel module.
+333 jail Create a jail.
+334 jail_attach Attach to a jail.
+340 kqueue Create kernel event queue.
+341 kevent Monitor kernel events.
+343 __realpathat Resolve pathname.
+345 pdfork Fork with process descriptor.
+346 pdkill Send signal via process descriptor.
+362 sctp_peeloff SCTP specific.
+363 sctp_generic_recvmsg SCTP receive.
+379 extattr_get_file Get extended attribute.
+392 thr_kill Send signal to a thread.
+393 thr_exit Terminate the current thread.
+397 jail_remove Remove a jail.
+400 lpathconf Get configuration values for a path.
+401 __cap_rights_get Get capability rights.
+402 cap_enter Enter capability mode.
+403 cap_getmode Get capability mode status.
+404 pdfork (old?) (Duplicate of 345)
+405 pdkill (old?) (Duplicate of 346)
+406 pdkill (old?) (Duplicate of 346)
+407 pdkill (old?) (Duplicate of 346)
+408 pdkill (old?) (Duplicate of 346)
+416 procctl Process control.
+417 __sysctl (old?) (Duplicate of 116)
+421 thr_new Create a new thread (used in exploit).
+422 thr_wake Wake a thread.
+423 thr_suspend Suspend a thread.
+429 closefrom Close all file descriptors above a threshold.
+430 __cap_rights_limit Limit capability rights.
+431 thr_exit (old?) (Duplicate of 393)
+432 thr_kill (old?) (Duplicate of 392)
+433 thr_suspend (old?) (Duplicate of 423)
+434 thr_wake (old?) (Duplicate of 422)
+435 thr_new (old?) (Duplicate of 421)
+441 posix_openpt Open a pseudo‑terminal.
+442 posix_fallocate Allocate space for a file.
+443 pselect Select with a signal mask.
+444 poll I/O multiplexing.
+454 getcontext Get current context.
+455 thr_new (new) Create a new thread (used in exploit).
+456 thr_exit (new) Terminate a thread.
+464 sched_rr_get_interval (old?) (Duplicate of 235)
+466 rtprio_thread Get/set real‑time priority of a thread (used in exploit).
+475 __syscall (deprecated) Old syscall mechanism.
+476 __syscall (deprecated) 
+477 mmap Map files/devices into memory.
+478 lseek (new) Reposition file offset.
+479 truncate (new) Truncate file.
+480 ftruncate Truncate an open file.
+481 __syscall (deprecated) 
+482 __syscall (deprecated) 
+483 __syscall (deprecated) 
+486 aio_read Asynchronous read.
+487 cpuset_getaffinity Get CPU affinity of a thread (used in exploit).
+488 cpuset_setaffinity Set CPU affinity of a thread (used in exploit).
+499 getfsstat Get list of mounted file systems.
+522 __getcwd Get current working directory.
+532 posix_fadvise Advise about file access patterns.
+533 jitshm_create PS4 specific: Create JIT shared memory (used for kernel patches).
+534 jitshm_destroy Destroy JIT shared memory.
+535 jitshm_map Map JIT shared memory.
+536 jitshm_unmap Unmap JIT shared memory.
+538 evf_create PS4 specific: Create event flag (used in exploit).
+539 evf_delete Delete event flag.
+540 evf_set Set event flag.
+541 evf_clear Clear event flag.
+542 evf_wait Wait for event flag.
+543 evf_poll Poll event flag.
+544 evf_set (duplicate?) (Duplicate of 540)
+545 evf_clear (duplicate?) (Duplicate of 541)
+546 evf_wait (duplicate?) (Duplicate of 542)
+547 evf_poll (duplicate?) (Duplicate of 543)
+548 evf_create (duplicate?) (Duplicate of 538)
+549 evf_delete (duplicate?) (Duplicate of 539)
+550 evf_set (duplicate?) (Duplicate of 540)
+551 evf_clear (duplicate?) (Duplicate of 541)
+552 evf_wait (duplicate?) (Duplicate of 542)
+553 evf_poll (duplicate?) (Duplicate of 543)
+554 evf_create (duplicate?) (Duplicate of 538)
+555 evf_delete (duplicate?) (Duplicate of 539)
+556 evf_set (duplicate?) (Duplicate of 540)
+557 evf_clear (duplicate?) (Duplicate of 541)
+558 evf_wait (duplicate?) (Duplicate of 542)
+559 evf_poll (duplicate?) (Duplicate of 543)
+560 evf_create (duplicate?) (Duplicate of 538)
+563 evf_delete (duplicate?) (Duplicate of 539)
+564 evf_set (duplicate?) (Duplicate of 540)
+565 evf_clear (duplicate?) (Duplicate of 541)
+566 evf_wait (duplicate?) (Duplicate of 542)
+567 evf_poll (duplicate?) (Duplicate of 543)
+572 __syscall (deprecated) 
+585 is_in_sandbox PS4 specific: Check if process is sandboxed (used in exploit).
+586 sandbox_enter Enter a sandbox.
+587 sandbox_leave Leave sandbox.
+588 sandbox_control Control sandbox.
+591 sysarch (new) Architecture‑specific syscall.
+592 __syscall (deprecated) 
+593 __syscall (deprecated) 
+594 __syscall (deprecated) 
+595 __syscall (deprecated) 
+596 __syscall (deprecated) 
+598 __syscall (deprecated) 
+599 __syscall (deprecated) 
+600 __syscall (deprecated) 
+601 __syscall (deprecated) 
+602 __syscall (deprecated) 
+603 __syscall (deprecated) 
+604 __syscall (deprecated) 
+605 __syscall (deprecated) 
+606 __syscall (deprecated) 
+607 __syscall (deprecated) 
+608 __syscall (deprecated) 
+610 thr_suspend_ucontext PS4 specific: Suspend a thread with ucontext (used in exploit).
+611 thr_resume_ucontext PS4 specific: Resume a suspended thread (used in exploit).
+612 thr_set_name Set thread name.
+613 thr_get_name Get thread name.
+615 thr_self Get thread ID.
+616 thr_join Wait for thread termination.
+617 thr_detach Detach a thread.
+618 thr_set_prio Set thread priority.
+619 thr_get_prio Get thread priority.
+620 thr_getschedparam Get thread scheduling parameters.
+622 thr_setschedparam Set thread scheduling parameters.
+623 thr_yield Yield processor (thread version).
+624 thr_setaffinity Set thread CPU affinity.
+625 thr_getaffinity Get thread CPU affinity.
+626 thr_curcpu Get current CPU number.
+627 thr_create (new) Create a kernel thread.
+628 thr_exit (new) Terminate a thread.
+629 thr_suspend (new) Suspend a thread.
+630 thr_resume (new) Resume a suspended thread.
+632 thr_suspend_ucontext (duplicate?) (Duplicate of 610)
+633 thr_resume_ucontext (duplicate?) (Duplicate of 611)
+634 thr_set_name (duplicate?) (Duplicate of 612)
+635 thr_get_name (duplicate?) (Duplicate of 613)
+636 thr_self (duplicate?) (Duplicate of 615)
+637 thr_join (duplicate?) (Duplicate of 616)
+638 thr_detach (duplicate?) (Duplicate of 617)
+639 thr_set_prio (duplicate?) (Duplicate of 618)
+640 thr_get_prio (duplicate?) (Duplicate of 619)
+641 thr_getschedparam (duplicate?) (Duplicate of 620)
+642 thr_setschedparam (duplicate?) (Duplicate of 622)
+643 thr_yield (duplicate?) (Duplicate of 623)
+646 kqueue (duplicate?) (Duplicate of 340)
+647 kevent (duplicate?) (Duplicate of 341)
+648 sched_setparam (duplicate?) (Duplicate of 236)
+649 sched_getparam (duplicate?) (Duplicate of 237)
+652 __cap_rights_limit (duplicate?) (Duplicate of 430)
+653 cap_enter (duplicate?) (Duplicate of 402)
+654 cap_getmode (duplicate?) (Duplicate of 403)
+655 pdfork (duplicate?) (Duplicate of 345)
+656 pdkill (duplicate?) (Duplicate of 346)
+657 pdkill (duplicate?) (Duplicate of 346)
+658 pdkill (duplicate?) (Duplicate of 346)
+659 pdkill (duplicate?) (Duplicate of 346)
+660 procctl (duplicate?) (Duplicate of 416)
+661 kexec PS4 specific: Execute kernel code (used for kernel patching).
+662 aio_multi_delete PS4 specific: Delete multiple AIO requests (used in exploit).
+663 aio_multi_wait Wait for multiple AIO requests (used in exploit).
+664 aio_multi_poll Poll multiple AIO requests (used in exploit).
+665 aio_multi_cancel Cancel multiple AIO requests (used in exploit).
+666 aio_multi_cancel (duplicate?) (Duplicate of 665)
+667 aio_multi_cancel (duplicate?) (Duplicate of 665)
+668 aio_multi_cancel (duplicate?) (Duplicate of 665)
+669 aio_submit_cmd PS4 specific: Submit an AIO command (used in exploit).
+670 aio_submit_cmd (duplicate?) (Duplicate of 669)
+671 aio_submit_cmd (duplicate?) (Duplicate of 669)
+672 aio_submit_cmd (duplicate?) (Duplicate of 669)
+673 aio_submit_cmd (duplicate?) (Duplicate of 669)
+674 aio_submit_cmd (duplicate?) (Duplicate of 669)
+675 aio_submit_cmd (duplicate?) (Duplicate of 669)
+676 aio_submit_cmd (duplicate?) (Duplicate of 669)
+677 aio_submit_cmd (duplicate?) (Duplicate of 669)
