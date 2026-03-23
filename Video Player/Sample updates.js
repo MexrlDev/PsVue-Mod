@@ -3,21 +3,17 @@
 // Open source for everyone to use, learn from, and enjoy.
 
 (function () {
-  log('=== Local Video Server ===');
+  log('=== Enhanced Local Video Server ===');
 
-  // Stop any background music that might be playing from the loader script
   if (typeof stopBgm === 'function') {
-    log('Stopping background music...');
-    stopBgm();
-  } else {
-    log('stopBgm not found, cannot stop music');
+    try { stopBgm(); } catch (e) {}
   }
 
   if (typeof libc_addr === 'undefined') {
     include('userland.js');
   }
 
-  // Register socket/syscall wrappers
+  // Syscall wrappers
   fn.register(97,  'socket',      ['bigint', 'bigint', 'bigint'], 'bigint');
   fn.register(98,  'connect',     ['bigint', 'bigint', 'bigint'], 'bigint');
   fn.register(104, 'bind',        ['bigint', 'bigint', 'bigint'], 'bigint');
@@ -34,39 +30,54 @@
 
   var socket_sys      = fn.socket;
   var bind_sys        = fn.bind;
-  var setsockopt_sys  = fn.setsockopt;
-  var listen_sys      = fn.listen;
-  var accept_sys      = fn.accept;
-  var getsockname_sys = fn.getsockname;
-  var read_sys        = fn.read_sys;
-  var write_sys       = fn.write_sys;
-  var close_sys       = fn.close_sys;
-  var open_sys        = fn.open_sys;
-  var select_sys      = fn.select;
-  var shutdown_sys    = fn.shutdown;
+  var setsockopt_sys   = fn.setsockopt;
+  var listen_sys       = fn.listen;
+  var accept_sys       = fn.accept;
+  var getsockname_sys  = fn.getsockname;
+  var read_sys         = fn.read_sys;
+  var write_sys        = fn.write_sys;
+  var close_sys        = fn.close_sys;
+  var open_sys         = fn.open_sys;
+  var select_sys       = fn.select;
+  var shutdown_sys     = fn.shutdown;
 
-  var AF_INET     = 2;
-  var SOCK_STREAM  = 1;
-  var SOL_SOCKET   = 0xFFFF;
-  var SO_REUSEADDR = 0x4;
-  var O_RDONLY     = 0;
+  var AF_INET      = 2;
+  var SOCK_STREAM   = 1;
+  var SOL_SOCKET    = 0xFFFF;
+  var SO_REUSEADDR  = 0x4;
+  var O_RDONLY      = 0;
 
-  // ===== VIDEO CONFIGURATION =====
-  var VIDEO_BASE_NAME = 'Woah';
+  // ===== CONFIGURATION =====
+  var VIDEO_BASE_NAME = 'Hehe';
   var VIDEO_DIR = '/download0/payloads/vid';
-  var PLAYLIST_FILE = VIDEO_BASE_NAME + '.m3u8';
-  // ===============================
+  var SCREEN_W = 1920;
+  var SCREEN_H = 1080;
+  var CHUNK_SIZE = 262144;
+  // =========================
 
   function read_bigint(v) {
-    return (v instanceof BigInt) ? v.lo : v;
+    if (v === null || v === undefined) return -1;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'bigint') return Number(v);
+    if (typeof v.lo !== 'undefined') return v.lo;
+    return Number(v);
+  }
+
+  function safeFree(p) {
+    try {
+      if (typeof mem !== 'undefined' && mem && typeof mem.free === 'function' && p) {
+        mem.free(p);
+      }
+    } catch (e) {}
   }
 
   function alloc_c_string(s) {
     var p = mem.malloc(s.length + 1);
+    var view = mem.view(p);
     for (var i = 0; i < s.length; i++) {
-      mem.view(p).setUint8(i, s.charCodeAt(i) & 0xFF);
+      view.setUint8(i, s.charCodeAt(i) & 0xFF);
     }
-    mem.view(p).setUint8(s.length, 0);
+    view.setUint8(s.length, 0);
     return p;
   }
 
@@ -74,43 +85,51 @@
     return write_sys(new BigInt(0, fd), buf, new BigInt(0, len));
   }
 
-  function send_text(fd, status_line, content_type, body) {
-    var headers =
-      'HTTP/1.1 ' + status_line + '\r\n' +
-      'Content-Type: ' + content_type + '\r\n' +
-      'Access-Control-Allow-Origin: *\r\n' +
-      'Connection: close\r\n' +
-      '\r\n';
-
-    var resp = headers + body;
-    var buf = mem.malloc(resp.length);
-    for (var i = 0; i < resp.length; i++) {
-      mem.view(buf).setUint8(i, resp.charCodeAt(i) & 0xFF);
+  function send_raw(fd, text) {
+    var buf = mem.malloc(text.length);
+    var view = mem.view(buf);
+    for (var i = 0; i < text.length; i++) {
+      view.setUint8(i, text.charCodeAt(i) & 0xFF);
     }
-    write_buffer(fd, buf, resp.length);
+    write_buffer(fd, buf, text.length);
+    safeFree(buf);
   }
 
-  function send_headers(fd, status_line, content_type) {
+  function send_headers(fd, status_line, content_type, content_length, extra_headers) {
     var headers =
       'HTTP/1.1 ' + status_line + '\r\n' +
       'Content-Type: ' + content_type + '\r\n' +
       'Access-Control-Allow-Origin: *\r\n' +
-      'Connection: close\r\n' +
-      '\r\n';
+      'Cache-Control: no-cache\r\n' +
+      'Accept-Ranges: bytes\r\n';
 
-    var buf = mem.malloc(headers.length);
-    for (var i = 0; i < headers.length; i++) {
-      mem.view(buf).setUint8(i, headers.charCodeAt(i) & 0xFF);
+    if (extra_headers && extra_headers.length) {
+      for (var i = 0; i < extra_headers.length; i++) {
+        headers += extra_headers[i] + '\r\n';
+      }
     }
-    write_buffer(fd, buf, headers.length);
+
+    if (content_length !== undefined && content_length !== null) {
+      headers += 'Content-Length: ' + content_length + '\r\n';
+    }
+
+    headers += 'Connection: close\r\n\r\n';
+    send_raw(fd, headers);
+  }
+
+  function send_text(fd, status_line, content_type, body) {
+    send_headers(fd, status_line, content_type, body.length, null);
+    send_raw(fd, body);
   }
 
   function content_type_for(path) {
     var p = path.toLowerCase();
-    if (p.indexOf('.m3u8') >= 0) return 'application/vnd.apple.mpegurl';
-    if (p.indexOf('.ts') >= 0)   return 'video/mp2t';
-    if (p.indexOf('.mp4') >= 0)  return 'video/mp4';
-    if (p.indexOf('.mov') >= 0)  return 'video/quicktime';
+    if (p.indexOf('.m3u8') >= 0 || p.indexOf('.m3u') >= 0) return 'application/vnd.apple.mpegurl';
+    if (p.indexOf('.ts') >= 0) return 'video/mp2t';
+    if (p.indexOf('.mp4') >= 0) return 'video/mp4';
+    if (p.indexOf('.mov') >= 0) return 'video/quicktime';
+    if (p.indexOf('.avi') >= 0) return 'video/x-msvideo';
+    if (p.indexOf('.mkv') >= 0) return 'video/x-matroska';
     return 'application/octet-stream';
   }
 
@@ -123,44 +142,13 @@
     return path;
   }
 
-  function is_safe_path(path) {
-    if (path.indexOf('..') >= 0) return false;
-    if (path.indexOf('\\') >= 0) return false;
-    return true;
-  }
-
-  function send_file(fd, filepath) {
-    var path_buf = alloc_c_string(filepath);
-    var file_fd = open_sys(path_buf, new BigInt(0, O_RDONLY), new BigInt(0, 0));
-
-    if (read_bigint(file_fd) < 0) {
-      log('Cannot open file: ' + filepath);
-      send_text(fd, '404 Not Found', 'text/plain', 'Not Found');
-      return;
-    }
-
-    send_headers(fd, '200 OK', content_type_for(filepath));
-
-    var chunk_size = 32768;
-    var file_buf = mem.malloc(chunk_size);
-
-    while (true) {
-      var n = read_sys(file_fd, file_buf, new BigInt(0, chunk_size));
-      var bytes_read = read_bigint(n);
-      if (bytes_read <= 0) break;
-
-      write_buffer(fd, file_buf, bytes_read);
-
-      if (bytes_read < chunk_size) break;
-    }
-
-    close_sys(file_fd);
-    log('Sent ' + filepath);
+  function strip_leading_slash(path) {
+    return (path && path.charAt(0) === '/') ? path.substring(1) : path;
   }
 
   function get_path(buf, len) {
     var req = '';
-    for (var i = 0; i < len && i < 2048; i++) {
+    for (var i = 0; i < len && i < 4096; i++) {
       var c = mem.view(buf).getUint8(i);
       if (c === 0) break;
       req += String.fromCharCode(c);
@@ -174,33 +162,211 @@
     return '/';
   }
 
-  // Create server socket
+  function parse_range_header(buf, len) {
+    var header = '';
+    for (var i = 0; i < len && i < 4096; i++) {
+      var c = mem.view(buf).getUint8(i);
+      if (c === 0) break;
+      header += String.fromCharCode(c);
+    }
+
+    var lines = header.split('\n');
+    for (var j = 0; j < lines.length; j++) {
+      var line = lines[j];
+      if (line.toLowerCase().indexOf('range:') === 0) {
+        var match = line.match(/bytes=(\d+)-(\d*)/);
+        if (match) {
+          return {
+            start: parseInt(match[1], 10),
+            end: match[2] ? parseInt(match[2], 10) : undefined
+          };
+        }
+        break;
+      }
+    }
+    return null;
+  }
+
+  function is_safe_path(path) {
+    if (path.indexOf('..') >= 0) return false;
+    if (path.indexOf('\\') >= 0) return false;
+    return true;
+  }
+
+  function file_exists(filepath) {
+    var path_buf = 0;
+    try {
+      path_buf = alloc_c_string(filepath);
+      var fd = open_sys(path_buf, new BigInt(0, O_RDONLY), new BigInt(0, 0));
+      var ok = read_bigint(fd) >= 0;
+      if (ok) close_sys(fd);
+      return ok;
+    } catch (e) {
+      return false;
+    } finally {
+      safeFree(path_buf);
+    }
+  }
+
+  function get_file_size(fd) {
+    var tmp = mem.malloc(65536);
+    var total = 0;
+
+    while (true) {
+      var n = read_sys(fd, tmp, new BigInt(0, 65536));
+      var bytes = read_bigint(n);
+      if (bytes <= 0) break;
+      total += bytes;
+      if (bytes < 65536) break;
+    }
+
+    safeFree(tmp);
+    return total;
+  }
+
+  function send_file(fd, filepath, range) {
+    var path_buf = 0;
+    var file_fd = -1;
+
+    try {
+      path_buf = alloc_c_string(filepath);
+      file_fd = open_sys(path_buf, new BigInt(0, O_RDONLY), new BigInt(0, 0));
+      if (read_bigint(file_fd) < 0) {
+        log('Cannot open file: ' + filepath);
+        send_text(fd, '404 Not Found', 'text/plain', 'Not Found');
+        return;
+      }
+
+      var file_size = get_file_size(file_fd);
+      close_sys(file_fd);
+
+      file_fd = open_sys(path_buf, new BigInt(0, O_RDONLY), new BigInt(0, 0));
+      if (read_bigint(file_fd) < 0) {
+        log('Cannot reopen file: ' + filepath);
+        send_text(fd, '500 Internal Server Error', 'text/plain', 'Server error');
+        return;
+      }
+
+      var start = 0;
+      var end = file_size - 1;
+      var status = '200 OK';
+      var extra_headers = null;
+
+      if (range && range.start !== undefined) {
+        start = range.start;
+        end = (range.end !== undefined) ? range.end : (file_size - 1);
+
+        if (start >= file_size || end >= file_size || start > end) {
+          send_text(fd, '416 Range Not Satisfiable', 'text/plain', 'Invalid range');
+          return;
+        }
+
+        status = '206 Partial Content';
+        extra_headers = ['Content-Range: bytes ' + start + '-' + end + '/' + file_size];
+
+        var skip_buf = mem.malloc(65536);
+        var remaining = start;
+        while (remaining > 0) {
+          var to_read = remaining > 65536 ? 65536 : remaining;
+          var s = read_sys(file_fd, skip_buf, new BigInt(0, to_read));
+          var skipped = read_bigint(s);
+          if (skipped <= 0) break;
+          remaining -= skipped;
+        }
+        safeFree(skip_buf);
+      }
+
+      var content_length = end - start + 1;
+      send_headers(fd, status, content_type_for(filepath), content_length, extra_headers);
+
+      var file_buf = mem.malloc(CHUNK_SIZE);
+      var bytes_left = content_length;
+
+      while (bytes_left > 0) {
+        var to_read = bytes_left > CHUNK_SIZE ? CHUNK_SIZE : bytes_left;
+        var n2 = read_sys(file_fd, file_buf, new BigInt(0, to_read));
+        var bytes_read = read_bigint(n2);
+        if (bytes_read <= 0) break;
+        write_buffer(fd, file_buf, bytes_read);
+        bytes_left -= bytes_read;
+      }
+
+      safeFree(file_buf);
+    } catch (e) {
+      log('send_file error: ' + e);
+      try { send_text(fd, '500 Internal Server Error', 'text/plain', 'Server error'); } catch (x) {}
+    } finally {
+      if (file_fd >= 0) {
+        try { close_sys(file_fd); } catch (e) {}
+      }
+      safeFree(path_buf);
+    }
+  }
+
+  function resolve_path(request_path) {
+    var safe = (request_path.charAt(0) === '/') ? request_path.substring(1) : request_path;
+    if (safe === '' || safe === '/') return { kind: 'root' };
+
+    var lower = safe.toLowerCase();
+    var disk_m3u8 = VIDEO_DIR + '/' + VIDEO_BASE_NAME + '.m3u8';
+    var disk_m3u  = VIDEO_DIR + '/' + VIDEO_BASE_NAME + '.m3u';
+
+    if (lower === (VIDEO_BASE_NAME + '.m3u8').toLowerCase()) {
+      if (file_exists(disk_m3u8)) return { kind: 'file', path: disk_m3u8 };
+      if (file_exists(disk_m3u))   return { kind: 'file', path: disk_m3u };
+      return { kind: 'missing', path: disk_m3u8 };
+    }
+
+    if (lower === (VIDEO_BASE_NAME + '.m3u').toLowerCase()) {
+      if (file_exists(disk_m3u))   return { kind: 'file', path: disk_m3u };
+      if (file_exists(disk_m3u8))  return { kind: 'file', path: disk_m3u8 };
+      return { kind: 'missing', path: disk_m3u };
+    }
+
+    return { kind: 'file', path: VIDEO_DIR + '/' + safe };
+  }
+
+  var playlist_m3u8 = VIDEO_DIR + '/' + VIDEO_BASE_NAME + '.m3u8';
+  var playlist_m3u   = VIDEO_DIR + '/' + VIDEO_BASE_NAME + '.m3u';
+
+  if (file_exists(playlist_m3u8)) {
+    log('Disk playlist found: ' + playlist_m3u8);
+  } else if (file_exists(playlist_m3u)) {
+    log('Disk playlist found: ' + playlist_m3u + ' (served as .m3u8)');
+  } else {
+    log('No playlist found on disk yet. Public URL still uses .m3u8.');
+  }
+
   log('Creating HTTP server for video files...');
   var srv = socket_sys(new BigInt(0, AF_INET), new BigInt(0, SOCK_STREAM), new BigInt(0, 0));
   if (read_bigint(srv) < 0) throw new Error('Cannot create socket');
 
-  // SO_REUSEADDR
   var optval = mem.malloc(4);
   mem.view(optval).setUint32(0, 1, true);
   setsockopt_sys(srv, new BigInt(0, SOL_SOCKET), new BigInt(0, SO_REUSEADDR), optval, new BigInt(0, 4));
+  safeFree(optval);
 
-  // Bind to port 0
   var addr = mem.malloc(16);
-  mem.view(addr).setUint8(0, 16);
-  mem.view(addr).setUint8(1, AF_INET);
-  mem.view(addr).setUint16(2, 0, false);
-  mem.view(addr).setUint32(4, 0, false);
+  var av = mem.view(addr);
+  av.setUint8(0, 16);
+  av.setUint8(1, AF_INET);
+  av.setUint16(2, 0, false);
+  av.setUint32(4, 0, false);
 
   if (bind_sys(srv, addr, new BigInt(0, 16)).lo < 0) {
+    safeFree(addr);
     close_sys(srv);
     throw new Error('Bind failed');
   }
+  safeFree(addr);
 
   var actual_addr = mem.malloc(16);
   var actual_len = mem.malloc(4);
   mem.view(actual_len).setUint32(0, 16, true);
   getsockname_sys(srv, actual_addr, actual_len);
   var port = mem.view(actual_addr).getUint16(2, false);
+  safeFree(actual_addr);
+  safeFree(actual_len);
 
   if (listen_sys(srv, new BigInt(0, 8)).lo < 0) {
     close_sys(srv);
@@ -209,21 +375,32 @@
 
   log('HTTP server listening on port ' + port);
 
-  var videoUrl = 'http://127.0.0.1:' + port + '/' + PLAYLIST_FILE;
+  var videoUrl = 'http://127.0.0.1:' + port + '/' + VIDEO_BASE_NAME + '.m3u8';
   log('Video URL: ' + videoUrl);
 
-  // UI setup
   jsmaf.root.children.length = 0;
 
   var video = new Video({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    width: SCREEN_W,
+    height: SCREEN_H,
     visible: true,
     autoplay: true
   });
   jsmaf.root.children.push(video);
+
+  video.onOpen = function () {
+    try { log('Video opened. Duration: ' + video.duration); } catch (e) {}
+  };
+
+  video.onerror = function (err) {
+    try { log('Video error: ' + JSON.stringify(err)); } catch (e) {}
+  };
+
+  video.onstatechange = function (state) {
+    try { log('Video state: ' + state); } catch (e) {}
+  };
 
   var serverRunning = true;
   var restartPending = false;
@@ -251,7 +428,7 @@
     var safeSetTimeout = function (callback, delay) {
       if (typeof setTimeout !== 'undefined') {
         setTimeout(callback, delay);
-      } else if (typeof jsmaf !== 'undefined' && jsmaf.setTimeout) {
+      } else if (typeof jsmaf !== 'undefined' && jsmaf && typeof jsmaf.setTimeout === 'function') {
         jsmaf.setTimeout(callback, delay);
       } else {
         callback();
@@ -278,79 +455,91 @@
     }, 100);
   }
 
-  video.onOpen = function () {
-    log('Video opened. Duration: ' + video.duration);
-  };
-
-  video.onerror = function (err) {
-    log('Video error: ' + JSON.stringify(err));
-  };
-
-  video.onstatechange = function (state) {
-    log('Video state: ' + state);
-  };
-
-  // select() structures
   var readfds = mem.malloc(128);
   var timeout = mem.malloc(16);
-  mem.view(timeout).setUint32(0, 0, true);
-  mem.view(timeout).setUint32(4, 0, true);
-  mem.view(timeout).setUint32(8, 0, true);
-  mem.view(timeout).setUint32(12, 0, true);
+
+  function reset_timeout() {
+    var tv = mem.view(timeout);
+    tv.setUint32(0, 0, true);
+    tv.setUint32(4, 0, true);
+    tv.setUint32(8, 0, true);
+    tv.setUint32(12, 0, true);
+  }
 
   function serverLoop() {
     if (!serverRunning) return;
 
-    for (var i = 0; i < 128; i++) {
-      mem.view(readfds).setUint8(i, 0);
-    }
+    var client = -1;
+    var client_addr = 0;
+    var client_len = 0;
+    var req_buf = 0;
 
-    var fd = srv.lo;
-    var byte_index = Math.floor(fd / 8);
-    var bit_index = fd % 8;
-    var current = mem.view(readfds).getUint8(byte_index);
-    mem.view(readfds).setUint8(byte_index, current | (1 << bit_index));
+    try {
+      for (var i = 0; i < 128; i++) {
+        mem.view(readfds).setUint8(i, 0);
+      }
 
-    var nfds = fd + 1;
-    var select_ret = select_sys(new BigInt(0, nfds), readfds, new BigInt(0, 0), new BigInt(0, 0), timeout);
-    if (select_ret.lo <= 0) return;
+      var fd = srv.lo;
+      var byte_index = Math.floor(fd / 8);
+      var bit_index = fd % 8;
+      var current = mem.view(readfds).getUint8(byte_index);
+      mem.view(readfds).setUint8(byte_index, current | (1 << bit_index));
 
-    var client_addr = mem.malloc(16);
-    var client_len = mem.malloc(4);
-    mem.view(client_len).setUint32(0, 16, true);
+      reset_timeout();
 
-    var client_ret = accept_sys(srv, client_addr, client_len);
-    var client = read_bigint(client_ret);
-    if (client < 0) return;
+      var nfds = fd + 1;
+      var select_ret = select_sys(new BigInt(0, nfds), readfds, new BigInt(0, 0), new BigInt(0, 0), timeout);
+      if (select_ret.lo <= 0) return;
 
-    var req_buf = mem.malloc(4096);
-    var read_ret = read_sys(new BigInt(0, client), req_buf, new BigInt(0, 4096));
-    var bytes = read_bigint(read_ret);
+      client_addr = mem.malloc(16);
+      client_len = mem.malloc(4);
+      mem.view(client_len).setUint32(0, 16, true);
 
-    if (bytes > 0) {
-      var path = get_path(req_buf, bytes);
-      log('Request: ' + path);
+      var client_ret = accept_sys(srv, client_addr, client_len);
+      client = read_bigint(client_ret);
+      if (client < 0) return;
 
-      if (path === '/' || path === '') {
-        send_text(client, '200 OK', 'text/plain', 'Video server running');
-      } else {
-        var safe_path = path.charAt(0) === '/' ? path.substring(1) : path;
-        if (!is_safe_path(safe_path)) {
-          send_text(client, '400 Bad Request', 'text/plain', 'Bad Request');
+      req_buf = mem.malloc(4096);
+      var read_ret = read_sys(new BigInt(0, client), req_buf, new BigInt(0, 4096));
+      var bytes = read_bigint(read_ret);
+
+      if (bytes > 0) {
+        var path = get_path(req_buf, bytes);
+        log('Request: ' + path);
+
+        if (path === '/' || path === '') {
+          send_text(client, '200 OK', 'text/plain', 'Video server running');
         } else {
-          var full_path = VIDEO_DIR + '/' + safe_path;
-          send_file(client, full_path);
+          var safe = (path.charAt(0) === '/') ? path.substring(1) : path;
+          if (!is_safe_path(safe)) {
+            send_text(client, '400 Bad Request', 'text/plain', 'Bad Request');
+          } else {
+            var range = parse_range_header(req_buf, bytes);
+            var resolved = resolve_path(path);
+
+            if (resolved.kind === 'missing') {
+              send_text(client, '404 Not Found', 'text/plain', 'Not Found');
+            } else if (resolved.kind === 'root') {
+              send_text(client, '200 OK', 'text/plain', 'Video server running');
+            } else {
+              send_file(client, resolved.path, range);
+            }
+          }
         }
       }
+    } catch (e) {
+      log('serverLoop error: ' + e);
+    } finally {
+      if (client >= 0) {
+        try { close_sys(new BigInt(0, client)); } catch (e) {}
+      }
+      safeFree(req_buf);
+      safeFree(client_addr);
+      safeFree(client_len);
     }
-
-    close_sys(new BigInt(0, client));
   }
 
-  jsmaf.onEnterFrame = function () {
-    serverLoop();
-  };
-
+  jsmaf.onEnterFrame = serverLoop;
   jsmaf.onKeyDown = function (keyCode) {
     if (keyCode === 14) {
       restartVideo();
@@ -359,9 +548,6 @@
     }
   };
 
-  log('Server ready.');
-  log('Starting playback...');
-  log('Video URL: ' + videoUrl);
-
+  log('Server ready. Starting playback...');
   video.open(videoUrl);
 })();
