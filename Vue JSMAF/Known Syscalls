@@ -1,0 +1,61 @@
+Number and Syscall Name
+3 read / read_sys
+4 write / write_sys
+5 open / open_sys
+6 close / close_sys
+10 unlink
+20 getpid
+23 setuid
+24 getuid
+27 recvmsg
+30 accept / accept_sys
+32 getsockname
+37 kill
+41 dup
+42 pipe
+54 ioctl
+73 munmap
+92 fcntl
+93 select
+97 socket
+98 connect
+99 netcontrol
+104 bind / bind_sys
+105 setsockopt
+106 listen / listen_sys
+118 getsockopt
+120 readv
+121 writev
+128 rename
+134 shutdown
+135 socketpair
+136 mkdir
+137 rmdir
+188 stat / stat_sys
+202 sysctl
+240 nanosleep
+272 getdents
+331 sched_yield
+362 kqueue
+431 thr_exit
+433 thr_kill
+455 thr_new
+466 rtprio_thread
+477 mmap / mmap_sys
+478 lseek
+487 cpuset_getaffinity
+488 cpuset_setaffinity
+533 jitshm_create
+538 evf_create
+539 evf_delete
+544 evf_set
+545 evf_clear
+585 is_in_sandbox
+632 thr_suspend_ucontext
+633 thr_resume_ucontext
+661 kexec
+662 aio_multi_delete
+663 aio_multi_wait
+664 aio_multi_poll
+666 aio_multi_cancel
+669 aio_submit_cmd
