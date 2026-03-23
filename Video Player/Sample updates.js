@@ -141,7 +141,6 @@
 
     send_headers(fd, '200 OK', content_type_for(filepath));
 
-    // Stream in chunks so long videos / large segments do not get truncated.
     var chunk_size = 32768;
     var file_buf = mem.malloc(chunk_size);
 
@@ -229,12 +228,17 @@
   var serverRunning = true;
   var restartPending = false;
 
+  function restartVideo() {
+    log('Restarting video...');
+    try { video.close(); } catch (e) {}
+    try { video.open(videoUrl); } catch (e) {}
+  }
+
   function restartApp() {
     if (restartPending) return;
     restartPending = true;
 
     log('Restarting application...');
-
     serverRunning = false;
 
     try { shutdown_sys(srv, new BigInt(0, 2)); } catch (e) {}
@@ -284,12 +288,6 @@
 
   video.onstatechange = function (state) {
     log('Video state: ' + state);
-
-    // Play once, no loop. When it ends, restart the app.
-    if (state === 'Ended') {
-      log('Video ended, restarting...');
-      restartApp();
-    }
   };
 
   // select() structures
@@ -354,7 +352,9 @@
   };
 
   jsmaf.onKeyDown = function (keyCode) {
-    if (keyCode === 13) {
+    if (keyCode === 14) {
+      restartVideo();
+    } else if (keyCode === 13) {
       restartApp();
     }
   };
