@@ -163,6 +163,10 @@
   var lastKeyPressTime = 0;
   var KEY_DEBOUNCE_MS = 200;
 
+  // ==================== AUDIO FIXES ====================
+  var isLoading = false;          // prevents double loadAndPlaySong calls
+  var trackEndedHandled = false;  // prevents multiple end-of-track triggers
+
   // ==================== HELPERS ====================
   function logMsg(msg) {
     log('[Player] ' + msg);
@@ -198,6 +202,7 @@
         if (typeof audio.stop === 'function') audio.stop();
         if (typeof audio.close === 'function') audio.close();
       } catch (e) { logMsg('Error stopping audio: ' + e.message); }
+      audio = null;
     }
     stopTimer();
     syncPlayIcon(false);
@@ -829,19 +834,20 @@
     loadCoverForSong(index);
   }
 
-  // Stops playback and closes the current file (keeps audio instance alive)
+  // Stops playback and closes the current file, releases the AudioClip instance
   function stopAudio() {
     if (audio) {
       try {
         if (typeof audio.stop === 'function') audio.stop();
         if (typeof audio.close === 'function') audio.close();
       } catch (e) { logMsg('Error stopping audio: ' + e.message); }
+      audio = null;
     }
     syncPlayIcon(false);
     stopTimer();
   }
 
-  // Ensure the audio instance exists
+  // Ensure the audio instance exists (creates a fresh one if needed)
   function ensureAudio() {
     if (!audio && typeof jsmaf !== 'undefined' && jsmaf.AudioClip) {
       try {
@@ -886,8 +892,13 @@
       if (!playing) return;
       applyTimerText();
 
-      // Check if song ended
-      if (trackDurationSeconds > 0 && getPlaybackPositionSeconds() >= trackDurationSeconds) {
+      // Check if song ended (with a small tolerance and lock to prevent multiple triggers)
+      if (!trackEndedHandled &&
+          trackDurationSeconds > 0 &&
+          getPlaybackPositionSeconds() >= trackDurationSeconds - 0.25) {
+
+        trackEndedHandled = true;
+
         if (loopEnabled) {
           loadAndPlaySong(currentSongIndex);
         } else if (shuffleEnabled) {
@@ -941,28 +952,49 @@
     stopTimer();
   }
 
+  // Load and play a song with a loading lock to prevent concurrent calls
   function loadAndPlaySong(index) {
-    if (index < 0 || index >= songList.length) return;
+    if (isLoading) return;
+    isLoading = true;
+
+    if (index < 0 || index >= songList.length) {
+      isLoading = false;
+      return;
+    }
 
     ensureAudio();
-    if (!audio) return;
+    if (!audio) {
+      isLoading = false;
+      return;
+    }
 
     var song = songList[index];
     var url = filePathToUrl(song.path);
 
-    stopAudio();
+    stopAudio();            // fully kills previous instance
+    ensureAudio();          // creates a fresh one
+    if (!audio) {
+      isLoading = false;
+      return;
+    }
 
     try {
       audio.open(url);
-      audio.play(true);
+      audio.play(false);
       syncPlayIcon(true);
       prepareTimerForSongStart();
       loadCoverForSong(index);
+      trackEndedHandled = false; // reset lock for new track
     } catch (e) {
       logMsg('Error opening/playing ' + url + ': ' + e.message);
       syncPlayIcon(false);
       stopTimer();
     }
+
+    // release loading lock after a short delay (avoid race during playback start)
+    safeSetTimeout(function () {
+      isLoading = false;
+    }, 150);
   }
 
   function selectSong(index, autoplayIfPlaying) {
