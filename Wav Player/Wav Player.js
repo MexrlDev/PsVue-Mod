@@ -163,30 +163,6 @@
   var lastKeyPressTime = 0;
   var KEY_DEBOUNCE_MS = 200;
 
-  // ==================== HELPER: STOP EXTERNAL BGM ====================
-  function stopExternalBgm() {
-    // Stop any global BGM clip from remote loader
-    if (typeof bgmClip !== 'undefined' && bgmClip) {
-      try {
-        bgmClip.stop();
-        bgmClip.close();
-      } catch (e) {
-        logMsg('Error stopping external BGM: ' + e.message);
-      }
-      bgmClip = null;
-    }
-  }
-
-  // Override external BGM start function to prevent it while we are in player mode
-  var _wavPlayerActive = false;
-  if (typeof startBgmIfEnabled === 'function') {
-    var _originalStartBgmIfEnabled = startBgmIfEnabled;
-    window.startBgmIfEnabled = function() {
-      if (_wavPlayerActive) return;
-      _originalStartBgmIfEnabled();
-    };
-  }
-
   // ==================== HELPERS ====================
   function logMsg(msg) {
     log('[Player] ' + msg);
@@ -968,9 +944,6 @@
   function loadAndPlaySong(index) {
     if (index < 0 || index >= songList.length) return;
 
-    // Stop any external BGM that might interfere
-    stopExternalBgm();
-
     ensureAudio();
     if (!audio) return;
 
@@ -1071,7 +1044,6 @@
   // ==================== UI MODE MANAGEMENT ====================
   function showListMode() {
     uiMode = 'list';
-    _wavPlayerActive = false;  // Allow external BGM to restart
     coverImageObj.visible = false;
     songNameText.visible = false;
     songTimeText.visible = false;
@@ -1086,17 +1058,11 @@
     autoPlayStatus.visible = false;
 
     updateListView();
-
-    // Optionally restart external BGM if it was stopped
-    if (typeof startBgmIfEnabled === 'function') {
-      startBgmIfEnabled();
-    }
   }
 
   function showPlayerMode(songIndex) {
     if (songIndex < 0 || songIndex >= songList.length) return;
     uiMode = 'player';
-    _wavPlayerActive = true;  // Block external BGM
     currentSongIndex = songIndex;
     selectedListIndex = songIndex;
 
@@ -1131,9 +1097,6 @@
     } else {
       autoPlayStatus.visible = true;
     }
-
-    // Stop any external BGM immediately
-    stopExternalBgm();
 
     updateSongInfoUI(songIndex);
     loadAndPlaySong(songIndex);
@@ -1511,6 +1474,7 @@
           if (folders.length) {
             if (selectedListIndex > 0) {
               selectedListIndex--;
+              // Adjust scroll offset if selected goes above visible area
               if (selectedListIndex < listScrollOffset) {
                 listScrollOffset = selectedListIndex;
               }
@@ -1523,6 +1487,7 @@
           if (folders.length) {
             if (selectedListIndex < folders.length - 1) {
               selectedListIndex++;
+              // Adjust scroll offset if selected goes below visible area
               if (selectedListIndex >= listScrollOffset + UI.list.visibleCount) {
                 listScrollOffset = selectedListIndex - UI.list.visibleCount + 1;
               }
