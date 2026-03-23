@@ -1,5 +1,5 @@
 // Originally from Earthonion
-// Modded and Remade by MexrlDev 
+// Modded and Remade by MexrlDev
 // Open source for everyone to use, learn from, and enjoy.
 
 (function () {
@@ -216,7 +216,7 @@
   // UI setup
   jsmaf.root.children.length = 0;
 
-  var video1 = new Video({
+  var video = new Video({
     x: 0,
     y: 0,
     width: 1920,
@@ -224,126 +224,10 @@
     visible: true,
     autoplay: true
   });
-  jsmaf.root.children.push(video1);
+  jsmaf.root.children.push(video);
 
-  var video2 = new Video({
-    x: 0,
-    y: 0,
-    width: 1920,
-    height: 1080,
-    visible: false,
-    autoplay: false
-  });
-  jsmaf.root.children.push(video2);
-
-  var currentVideo = video1;
-  var nextVideo = video2;
-  var preloadStarted = false;
-  var requestCount = 0;
   var serverRunning = true;
   var restartPending = false;
-
-  function setupVideoCallbacks(video, label) {
-    video.onOpen = function () {
-      log('Video ' + label + ' opened. Duration: ' + video.duration);
-    };
-
-    video.onerror = function (err) {
-      log('Video error: ' + JSON.stringify(err));
-    };
-
-    video.onstatechange = function (state) {
-      log('Video ' + label + ' state: ' + state);
-
-      if (video === currentVideo && state === 'Ended') {
-        log('Swapping to next video...');
-
-        currentVideo.visible = false;
-        nextVideo.visible = true;
-        nextVideo.play();
-
-        var tmp = currentVideo;
-        currentVideo = nextVideo;
-        nextVideo = tmp;
-        preloadStarted = false;
-      }
-    };
-  }
-
-  setupVideoCallbacks(video1, 'current');
-  setupVideoCallbacks(video2, 'next');
-
-  // select() structures
-  var readfds = mem.malloc(128);
-  var timeout = mem.malloc(16);
-  mem.view(timeout).setUint32(0, 0, true);
-  mem.view(timeout).setUint32(4, 0, true);
-  mem.view(timeout).setUint32(8, 0, true);
-  mem.view(timeout).setUint32(12, 0, true);
-
-  function serverLoop() {
-    if (!serverRunning) return;
-
-    for (var i = 0; i < 128; i++) {
-      mem.view(readfds).setUint8(i, 0);
-    }
-
-    var fd = srv.lo;
-    var byte_index = Math.floor(fd / 8);
-    var bit_index = fd % 8;
-    var current = mem.view(readfds).getUint8(byte_index);
-    mem.view(readfds).setUint8(byte_index, current | (1 << bit_index));
-
-    var nfds = fd + 1;
-    var select_ret = select_sys(new BigInt(0, nfds), readfds, new BigInt(0, 0), new BigInt(0, 0), timeout);
-    if (select_ret.lo <= 0) return;
-
-    var client_addr = mem.malloc(16);
-    var client_len = mem.malloc(4);
-    mem.view(client_len).setUint32(0, 16, true);
-
-    var client_ret = accept_sys(srv, client_addr, client_len);
-    var client = read_bigint(client_ret);
-    if (client < 0) return;
-
-    requestCount++;
-
-    var req_buf = mem.malloc(4096);
-    var read_ret = read_sys(new BigInt(0, client), req_buf, new BigInt(0, 4096));
-    var bytes = read_bigint(read_ret);
-
-    if (bytes > 0) {
-      var path = get_path(req_buf, bytes);
-      log('Request #' + requestCount + ': ' + path);
-
-      if (path === '/' || path === '') {
-        send_text(client, '200 OK', 'text/plain', 'Video server running');
-      } else {
-        var safe_path = path.charAt(0) === '/' ? path.substring(1) : path;
-        if (!is_safe_path(safe_path)) {
-          send_text(client, '400 Bad Request', 'text/plain', 'Bad Request');
-        } else {
-          var full_path = VIDEO_DIR + '/' + safe_path;
-          send_file(client, full_path);
-        }
-      }
-    }
-
-    close_sys(new BigInt(0, client));
-  }
-
-  jsmaf.onEnterFrame = function () {
-    serverLoop();
-
-    if (currentVideo.duration > 0 && currentVideo.elapsed > 0) {
-      var threshold = currentVideo.duration * 0.80;
-      if (!preloadStarted && currentVideo.elapsed >= threshold) {
-        log('Preloading next video at ' + currentVideo.elapsed + ' ms');
-        preloadStarted = true;
-        nextVideo.open(videoUrl);
-      }
-    }
-  };
 
   function restartApp() {
     if (restartPending) return;
@@ -355,9 +239,7 @@
 
     try { shutdown_sys(srv, new BigInt(0, 2)); } catch (e) {}
     try { close_sys(srv); } catch (e) {}
-
-    try { currentVideo.close(); } catch (e) {}
-    try { nextVideo.close(); } catch (e) {}
+    try { video.close(); } catch (e) {}
 
     jsmaf.onEnterFrame = null;
     jsmaf.onKeyDown = null;
@@ -392,6 +274,85 @@
     }, 100);
   }
 
+  video.onOpen = function () {
+    log('Video opened. Duration: ' + video.duration);
+  };
+
+  video.onerror = function (err) {
+    log('Video error: ' + JSON.stringify(err));
+  };
+
+  video.onstatechange = function (state) {
+    log('Video state: ' + state);
+
+    // Play once, no loop. When it ends, restart the app.
+    if (state === 'Ended') {
+      log('Video ended, restarting...');
+      restartApp();
+    }
+  };
+
+  // select() structures
+  var readfds = mem.malloc(128);
+  var timeout = mem.malloc(16);
+  mem.view(timeout).setUint32(0, 0, true);
+  mem.view(timeout).setUint32(4, 0, true);
+  mem.view(timeout).setUint32(8, 0, true);
+  mem.view(timeout).setUint32(12, 0, true);
+
+  function serverLoop() {
+    if (!serverRunning) return;
+
+    for (var i = 0; i < 128; i++) {
+      mem.view(readfds).setUint8(i, 0);
+    }
+
+    var fd = srv.lo;
+    var byte_index = Math.floor(fd / 8);
+    var bit_index = fd % 8;
+    var current = mem.view(readfds).getUint8(byte_index);
+    mem.view(readfds).setUint8(byte_index, current | (1 << bit_index));
+
+    var nfds = fd + 1;
+    var select_ret = select_sys(new BigInt(0, nfds), readfds, new BigInt(0, 0), new BigInt(0, 0), timeout);
+    if (select_ret.lo <= 0) return;
+
+    var client_addr = mem.malloc(16);
+    var client_len = mem.malloc(4);
+    mem.view(client_len).setUint32(0, 16, true);
+
+    var client_ret = accept_sys(srv, client_addr, client_len);
+    var client = read_bigint(client_ret);
+    if (client < 0) return;
+
+    var req_buf = mem.malloc(4096);
+    var read_ret = read_sys(new BigInt(0, client), req_buf, new BigInt(0, 4096));
+    var bytes = read_bigint(read_ret);
+
+    if (bytes > 0) {
+      var path = get_path(req_buf, bytes);
+      log('Request: ' + path);
+
+      if (path === '/' || path === '') {
+        send_text(client, '200 OK', 'text/plain', 'Video server running');
+      } else {
+        var safe_path = path.charAt(0) === '/' ? path.substring(1) : path;
+        if (!is_safe_path(safe_path)) {
+          send_text(client, '400 Bad Request', 'text/plain', 'Bad Request');
+        } else {
+          var full_path = VIDEO_DIR + '/' + safe_path;
+          send_file(client, full_path);
+        }
+      }
+    }
+
+    close_sys(new BigInt(0, client));
+  }
+
+  jsmaf.onEnterFrame = function () {
+    serverLoop();
+  };
+
   jsmaf.onKeyDown = function (keyCode) {
     if (keyCode === 13) {
       restartApp();
@@ -402,5 +363,5 @@
   log('Starting playback...');
   log('Video URL: ' + videoUrl);
 
-  video1.open(videoUrl);
+  video.open(videoUrl);
 })();
