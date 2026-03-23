@@ -1472,15 +1472,27 @@
       if (listType === 'folders') {
         if (keyCode === KEY_UP) {
           if (folders.length) {
-            selectedListIndex = (selectedListIndex - 1 + folders.length) % folders.length;
-            updateListView();
+            if (selectedListIndex > 0) {
+              selectedListIndex--;
+              // Adjust scroll offset if selected goes above visible area
+              if (selectedListIndex < listScrollOffset) {
+                listScrollOffset = selectedListIndex;
+              }
+              updateListView();
+            }
           }
           return;
         }
         if (keyCode === KEY_DOWN) {
           if (folders.length) {
-            selectedListIndex = (selectedListIndex + 1) % folders.length;
-            updateListView();
+            if (selectedListIndex < folders.length - 1) {
+              selectedListIndex++;
+              // Adjust scroll offset if selected goes below visible area
+              if (selectedListIndex >= listScrollOffset + UI.list.visibleCount) {
+                listScrollOffset = selectedListIndex - UI.list.visibleCount + 1;
+              }
+              updateListView();
+            }
           }
           return;
         }
@@ -1498,15 +1510,25 @@
       } else if (listType === 'songs') {
         if (keyCode === KEY_UP) {
           if (songList.length) {
-            selectedListIndex = (selectedListIndex - 1 + songList.length) % songList.length;
-            updateListView();
+            if (selectedListIndex > 0) {
+              selectedListIndex--;
+              if (selectedListIndex < listScrollOffset) {
+                listScrollOffset = selectedListIndex;
+              }
+              updateListView();
+            }
           }
           return;
         }
         if (keyCode === KEY_DOWN) {
           if (songList.length) {
-            selectedListIndex = (selectedListIndex + 1) % songList.length;
-            updateListView();
+            if (selectedListIndex < songList.length - 1) {
+              selectedListIndex++;
+              if (selectedListIndex >= listScrollOffset + UI.list.visibleCount) {
+                listScrollOffset = selectedListIndex - UI.list.visibleCount + 1;
+              }
+              updateListView();
+            }
           }
           return;
         }
@@ -1521,6 +1543,7 @@
           selectedListIndex = currentFolderIndex;
           if (selectedListIndex < 0) selectedListIndex = 0;
           if (selectedListIndex >= folders.length) selectedListIndex = 0;
+          listScrollOffset = 0;
           updateListView();
           return;
         }
