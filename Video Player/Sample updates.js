@@ -5,6 +5,14 @@
 (function () {
   log('=== Local Video Server ===');
 
+  // Stop any background music that might be playing from the loader script
+  if (typeof stopBgm === 'function') {
+    log('Stopping background music...');
+    stopBgm();
+  } else {
+    log('stopBgm not found, cannot stop music');
+  }
+
   if (typeof libc_addr === 'undefined') {
     include('userland.js');
   }
