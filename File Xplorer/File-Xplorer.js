@@ -257,7 +257,7 @@
   var selectImgUrl = baseUrl + 'list-select.png';
   var selectedImgUrl = baseUrl + 'list-selected.png';
   var popupBgUrl = baseUrl + 'opt.png';
-  var bgmUrl = baseUrl + 'Fade-Away-Seether.wav';
+  var bgmUrl = baseUrl + 'bgm.wav';
 
   // UI dimensions
   var screenWidth = 1920;
@@ -1142,7 +1142,7 @@
 
       case 'Run':
         if (multiMode) {
-          showError('No.. You cannot fo this!.. you are on mutiple select..');
+          showError('No.. You cannot do this!.. you are on mutiple select..');
           return;
         }
         if (!isJsFile(item)) {
