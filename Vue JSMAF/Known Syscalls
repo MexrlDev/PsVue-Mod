@@ -1,155 +1,60 @@
-Number and Syscall Name
-3 read / read_sys
-4 write / write_sys
-5 open / open_sys
-6 close / close_sys
-10 unlink
-20 getpid
-23 setuid
-24 getuid
-27 recvmsg
-30 accept / accept_sys
-32 getsockname
-37 kill
-41 dup
-42 pipe
-54 ioctl
-73 munmap
-92 fcntl
-93 select
-97 socket
-98 connect
-99 netcontrol
-104 bind / bind_sys
-105 setsockopt
-106 listen / listen_sys
-118 getsockopt
-120 readv
-121 writev
-128 rename
-134 shutdown
-135 socketpair
-136 mkdir
-137 rmdir
-188 stat / stat_sys
-202 sysctl
-240 nanosleep
-272 getdents
-331 sched_yield
-362 kqueue
-431 thr_exit
-433 thr_kill
-455 thr_new
-466 rtprio_thread
-477 mmap / mmap_sys
-478 lseek
-487 cpuset_getaffinity
-488 cpuset_setaffinity
-533 jitshm_create
-538 evf_create
-539 evf_delete
-544 evf_set
-545 evf_clear
-585 is_in_sandbox
-632 thr_suspend_ucontext
-633 thr_resume_ucontext
-661 kexec
-662 aio_multi_delete
-663 aio_multi_wait
-664 aio_multi_poll
-666 aio_multi_cancel
-669 aio_submit_cmd
-------
-
-File I/O & Filesystem
-
-Syscall Description
-3 (read) Read data from a file descriptor
-4 (write) Write data to a file descriptor
-5 (open) Open a file
-6 (close) Close a file descriptor
-10 (unlink) Delete a file
-128 (rename) Rename a file or directory
-136 (mkdir) Create a directory
-137 (rmdir) Remove a directory
-188 (stat) Get file status
-272 (getdents) Read directory entries
-478 (lseek) Reposition file offset
-
-Process & Thread Control
-
-Syscall Description
-20 (getpid) Get current process ID
-23 (setuid) Set user ID
-24 (getuid) Get user ID
-37 (kill) Send signal to process
-41 (dup) Duplicate file descriptor
-42 (pipe) Create pipe
-54 (ioctl) Device-specific control
-92 (fcntl) File control
-431 (thr_exit) Terminate current thread
-433 (thr_kill) Send signal to thread
-455 (thr_new) Create a new thread
-466 (rtprio_thread) Get/set realtime priority of a thread
-632 (thr_suspend_ucontext) Suspend a thread
-633 (thr_resume_ucontext) Resume a suspended thread
-585 (is_in_sandbox) Check if process is in sandbox
-
-Memory Management
-
-Syscall Description
-73 (munmap) Unmap memory region
-477 (mmap) Map memory
-
-Networking
-
-Syscall Description
-27 (recvmsg) Receive message from socket
-30 (accept) Accept connection on socket
-32 (getsockname) Get socket name
-97 (socket) Create an endpoint for communication
-98 (connect) Initiate connection on socket
-99 (netcontrol) PS4 specific: netcontrol (net event queue)
-104 (bind) Bind name to socket
-105 (setsockopt) Set socket options
-106 (listen) Listen for connections on socket
-118 (getsockopt) Get socket options
-120 (readv) Read data into multiple buffers
-121 (writev) Write data from multiple buffers
-134 (shutdown) Shutdown part of a full-duplex connection
-135 (socketpair) Create a pair of connected sockets
-
-Asynchronous I/O (AIO)
-
-Syscall Description
-662 (aio_multi_delete) Delete multiple AIO requests
-663 (aio_multi_wait) Wait for multiple AIO requests to complete
-664 (aio_multi_poll) Poll status of multiple AIO requests
-666 (aio_multi_cancel) Cancel multiple AIO requests
-669 (aio_submit_cmd) Submit an AIO command
-
-Event & Synchronization
-
-Syscall Description
-240 (nanosleep) High-resolution sleep
-331 (sched_yield) Yield processor
-362 (kqueue) Create kernel event queue
-538 (evf_create) Create event flag (PS4 specific)
-539 (evf_delete) Delete event flag
-544 (evf_set) Set event flag
-545 (evf_clear) Clear event flag
-
-System Information & Control
-
-Syscall Description
-202 (sysctl) Get/set system information
-487 (cpuset_getaffinity) Get CPU affinity
-488 (cpuset_setaffinity) Set CPU affinity
-533 (jitshm_create) Create JIT shared memory (PS4)
-661 (kexec) Execute kernel code (PS4 kernel patch)
-
-Additional
-
-Syscall Description
-93 (select) Synchronous I/O multiplexing
-478 (lseek) Reposition file offset
+Number (hex) Number (dec) Name(s)
+0x03 3 read, read_sys
+0x04 4 write, write_sys
+0x05 5 open, open_sys
+0x06 6 close, close_sys
+0x0A 10 unlink
+0x14 20 getpid
+0x17 23 setuid
+0x18 24 getuid
+0x1B 27 recvmsg
+0x1E 30 accept, accept_sys
+0x20 32 getsockname
+0x25 37 kill
+0x29 41 dup
+0x2A 42 pipe
+0x36 54 ioctl
+0x49 73 munmap
+0x5C 92 fcntl
+0x5D 93 select
+0x61 97 socket
+0x62 98 connect
+0x63 99 netcontrol
+0x68 104 bind, bind_sys
+0x69 105 setsockopt
+0x6A 106 listen, listen_sys
+0x76 118 getsockopt
+0x78 120 readv
+0x79 121 writev
+0x80 128 rename
+0x87 135 socketpair
+0x88 136 mkdir
+0x89 137 rmdir
+0xBC 188 stat, stat_sys
+0xCA 202 sysctl
+0xF0 240 nanosleep
+0x110 272 getdents
+0x14B 331 sched_yield
+0x16A 362 kqueue
+0x1AF 431 thr_exit
+0x1B1 433 thr_kill
+0x1C7 455 thr_new
+0x1D2 466 rtprio_thread
+0x1DD 477 mmap, mmap_sys
+0x1DE 478 lseek
+0x1E7 487 cpuset_getaffinity
+0x1E8 488 cpuset_setaffinity
+0x215 533 jitshm_create
+0x21A 538 evf_create
+0x21B 539 evf_delete
+0x220 544 evf_set
+0x221 545 evf_clear
+0x249 585 is_in_sandbox
+0x278 632 thr_suspend_ucontext
+0x279 633 thr_resume_ucontext
+0x295 661 kexec
+0x296 662 aio_multi_delete
+0x297 663 aio_multi_wait
+0x298 664 aio_multi_poll
+0x29A 666 aio_multi_cancel
+0x29D 669 aio_submit_cmd
