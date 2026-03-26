@@ -3,6 +3,7 @@
 
 // Fun Fact, this is a remastered version of my old first project for vue, the legacy File Explorer.
 
+
 (function () {
   'use strict';
 
@@ -35,7 +36,7 @@
   }
   globalCleanup();
 
-  // Syscalls (BTW find more in my repo, on the folder of JSMAF.. youll find a lot of useful stuff for development :3)
+  // Syscalls ( BTW.... get more of them (like literally all of them from my repo, on the Vue JSMAF folder ;3 )
   try { fn.register(0x05, 'open_sys', ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x06, 'close_sys', ['bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x110, 'getdents', ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
@@ -46,12 +47,12 @@
   try { fn.register(0x88, 'mkdir_sys', ['bigint', 'bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x89, 'rmdir_sys', ['bigint'], 'bigint'); } catch (e) {}
 
-
   // Asset paths
   var baseUrl = 'file:///../download0/payloads/FileXplorer/Data/';
   var bgImageUrl = baseUrl + 'bg.png';
   var openingImgUrl = baseUrl + 'opening.png';
   var folderIconUrl = baseUrl + 'folder.png';
+  var folderFavIconUrl = baseUrl + 'folderfav.png';
   var fileIconUrl = baseUrl + 'file.png';
   var imageIconUrl = baseUrl + 'image.png';
   var videoIconUrl = baseUrl + 'video.png';
@@ -60,7 +61,8 @@
   var selectedImgUrl = baseUrl + 'list-selected.png';
   var popupBgUrl = baseUrl + 'opt.png';
   var helpImgUrl = baseUrl + 'help.png';
-  var bgmUrl = baseUrl + 'Fade-Away-Seether.wav';
+  var bgmUrl = baseUrl + 'bgm.wav';
+  var favConfigPath = baseUrl + 'Fav.json';
 
   // UI
   var screenWidth = 1920;
@@ -70,8 +72,8 @@
   var listStartY = 100;
   var listWidth = screenWidth;
 
-  var popupWidth = 500;
-  var popupHeight = 650;
+  var popupWidth = 560;
+  var popupHeight = 740;
   var popupX = (screenWidth - popupWidth) / 2;
   var popupY = (screenHeight - popupHeight) / 2;
   var popupOptionHeight = 50;
@@ -98,13 +100,15 @@
   var popupActive = false;
   var viewerActive = false;
   var helpActive = false;
+  var favMode = false;
+  var favReturnState = null;
   var restartPending = false;
   var popupOverlay = null;
   var popupBgImg = null;
   var popupOptionBgs = [];
   var popupOptionTexts = [];
   var popupSelected = 0;
-  var popupOptions = ['Rename', 'Delete', 'Create', 'Move', 'Edit', 'Run', 'Copy', 'Paste', 'Help'];
+  var popupOptions = ['Rename', 'Delete', 'Create', 'Move', 'Edit', 'Run', 'Copy', 'Paste', 'Fav', 'Unfav', 'Help'];
   var viewerOverlay = null;
   var viewerModalBg = null;
   var viewerTitle = null;
@@ -116,9 +120,12 @@
   var intervals = [];
   var timeouts = [];
   var selectedMap = {};
+  var favoritePaths = [];
   var copiedItems = [];
   var navHoldKey = null;
   var navHoldInterval = null;
+  var favBrowseActive = false;
+  var favPathStack = [];
 
   try { new Style({ name: 'white', color: 'white', size: 28 }); } catch (e) {}
   try { new Style({ name: 'small', color: 'white', size: 22 }); } catch (e) {}
@@ -214,12 +221,30 @@
   }
 
   function getFileIconUrl(item) {
-    if (item && item.isDir) return folderIconUrl;
+    if (item && item.isDir) return favMode ? folderFavIconUrl : folderIconUrl;
     var ext = (item && item.name ? item.name : '').split('.').pop().toLowerCase();
     if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'gif' || ext === 'bmp' || ext === 'webp') return imageIconUrl;
     if (ext === 'mp4' || ext === 'mkv' || ext === 'avi' || ext === 'mov' || ext === 'wmv' || ext === 'flv' || ext === 'webm' || ext === 'ts') return videoIconUrl;
     if (ext === 'wav' || ext === 'mp3' || ext === 'ogg' || ext === 'flac' || ext === 'aac' || ext === 'm4a' || ext === 'wma') return musicIconUrl;
     return fileIconUrl;
+  }
+
+  function reliableImageLoad(img, url, label) {
+    var tries = 0;
+    function apply() {
+      try { img.url = url; } catch (e) {}
+    }
+    try {
+      img.onerror = function () {
+        tries++;
+        if (tries <= 6) {
+          scheduleTimeout(apply, tries * 180);
+        } else {
+          log('Failed to load ' + label + ': ' + url);
+        }
+      };
+    } catch (e) {}
+    scheduleTimeout(apply, 0);
   }
 
   function promptLater(title, initial, maxLen, cb) {
@@ -280,7 +305,7 @@
 
   function refreshPathLabel() {
     if (!persistentPathText) return;
-    persistentPathText.text = currentPath;
+    persistentPathText.text = favMode ? 'FAVORITES' : currentPath;
   }
 
   function scheduleTimeout(fn, delay) {
@@ -315,6 +340,177 @@
       try { actionFn(); } catch (e) {}
     }, 120);
     intervals.push(navHoldInterval);
+  }
+
+  // Favorites
+  function normalizeFavList(arr) {
+    var out = [];
+    var seen = {};
+    if (!arr || !arr.length) return out;
+    for (var i = 0; i < arr.length; i++) {
+      var p = toFsPath(arr[i]);
+      if (p !== '/' && !seen[p]) {
+        seen[p] = true;
+        out.push(p);
+      }
+    }
+    return out;
+  }
+
+  function ensureFavConfigExists(callback) {
+    var favPath = toFsPath(favConfigPath);
+    readFileContent(favPath, function (err, content) {
+      if (err) {
+        createFile(favPath, function (createErr) {
+          if (createErr) {
+            if (callback) callback(createErr);
+            return;
+          }
+          writeFileContent(favPath, '[]', function (writeErr) {
+            if (callback) callback(writeErr || null);
+          });
+        });
+        return;
+      }
+      if (typeof content !== 'string' || !content.trim()) {
+        writeFileContent(favPath, '[]', function (writeErr2) {
+          if (callback) callback(writeErr2 || null);
+        });
+        return;
+      }
+      if (callback) callback(null);
+    });
+  }
+
+  function saveFavorites(callback) {
+    favoritePaths = normalizeFavList(favoritePaths);
+    var favPath = toFsPath(favConfigPath);
+    ensureFavConfigExists(function (ensureErr) {
+      if (ensureErr) {
+        if (callback) callback(ensureErr);
+        return;
+      }
+      var payload = JSON.stringify(favoritePaths, null, 2);
+      writeFileContent(favPath, payload, function (err) {
+        if (err) {
+          createFile(favPath, function (createErr) {
+            if (createErr) {
+              if (callback) callback(err || createErr);
+              return;
+            }
+            writeFileContent(favPath, payload, function (retryErr) {
+              if (callback) callback(retryErr || null);
+            });
+          });
+          return;
+        }
+        if (callback) callback(null);
+      });
+    });
+  }
+
+  function loadFavorites() {
+    var favPath = toFsPath(favConfigPath);
+    readFileContent(favPath, function (err, content) {
+      if (err) {
+        favoritePaths = [];
+        ensureFavConfigExists(function () {});
+        return;
+      }
+      try {
+        var parsed = JSON.parse(content || '[]');
+        if (Array.isArray(parsed)) favoritePaths = normalizeFavList(parsed);
+        else favoritePaths = [];
+      } catch (e) {
+        favoritePaths = [];
+      }
+      ensureFavConfigExists(function () {});
+    });
+  }
+
+  function isFavoritePath(path) {
+    path = toFsPath(path);
+    for (var i = 0; i < favoritePaths.length; i++) if (favoritePaths[i] === path) return true;
+    return false;
+  }
+
+  function addFavorites(items) {
+    var changed = false;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (!it || !it.isDir) continue;
+      var p = toFsPath(it.path);
+      if (p === '/' || isFavoritePath(p)) continue;
+      favoritePaths.push(p);
+      changed = true;
+    }
+    if (!changed) {
+      showError('Nothing to add to favorites.');
+      return;
+    }
+    favoritePaths = normalizeFavList(favoritePaths);
+    saveFavorites(function (err) {
+      if (err) showError('Fav save failed: ' + (err.message || err));
+      if (favMode) refreshDirectoryData();
+    });
+  }
+
+  function removeFavorites(items) {
+    var removeMap = {};
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (!it || !it.isDir) continue;
+      removeMap[toFsPath(it.path)] = true;
+    }
+    var next = [];
+    for (var j = 0; j < favoritePaths.length; j++) {
+      if (!removeMap[favoritePaths[j]]) next.push(favoritePaths[j]);
+    }
+    if (next.length === favoritePaths.length) {
+      showError('Nothing to remove from favorites.');
+      return;
+    }
+    favoritePaths = next;
+    saveFavorites(function (err) {
+      if (err) showError('Fav save failed: ' + (err.message || err));
+      if (favMode) refreshDirectoryData();
+    });
+  }
+
+  function enterFavMode() {
+    if (favMode) return;
+    favReturnState = {
+      currentPath: currentPath,
+      pathStack: pathStack.slice(0),
+      selectedIndex: selectedIndex,
+      scrollOffset: scrollOffset,
+      selectedMap: (function () { var m = {}; for (var k in selectedMap) if (Object.prototype.hasOwnProperty.call(selectedMap, k) && selectedMap[k]) m[k] = true; return m; })()
+    };
+    favMode = true;
+    favBrowseActive = false;
+    favPathStack = [];
+    clearSelection();
+    selectedIndex = 0;
+    scrollOffset = 0;
+    refreshDirectoryData();
+    refreshPathLabel();
+  }
+
+  function exitFavMode() {
+    if (!favMode) return;
+    favMode = false;
+    favBrowseActive = false;
+    favPathStack = [];
+    if (favReturnState) {
+      currentPath = normalizePath(favReturnState.currentPath || '/');
+      pathStack = (favReturnState.pathStack && favReturnState.pathStack.length) ? favReturnState.pathStack.slice(0) : [currentPath];
+      selectedIndex = favReturnState.selectedIndex || 0;
+      scrollOffset = favReturnState.scrollOffset || 0;
+      selectedMap = favReturnState.selectedMap || {};
+    }
+    favReturnState = null;
+    refreshDirectoryData();
+    refreshPathLabel();
   }
 
   // Filesystem
@@ -684,6 +880,21 @@
     });
   }
 
+  function runFavoriteToggleAction(item, multiItems) {
+    if (isMultiSelectMode()) {
+      var folders = multiItems.filter(function (x) { return x && x.isDir; });
+      if (!folders.length) { showError('No folders selected.'); return; }
+      var allFav = true;
+      for (var i = 0; i < folders.length; i++) if (!isFavoritePath(folders[i].path)) { allFav = false; break; }
+      if (allFav) removeFavorites(folders);
+      else addFavorites(folders);
+      return;
+    }
+    if (!item || !item.isDir) { showError('Only folders can be favorited.'); return; }
+    if (isFavoritePath(item.path)) removeFavorites([item]);
+    else addFavorites([item]);
+  }
+
   function showError(msg) { jsmaf.alert(msg); }
 
   // UI
@@ -691,6 +902,20 @@
     for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
     for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
     lastSelectedIndex = -1;
+  }
+
+  function makeFavoriteItems() {
+    var out = [];
+    for (var i = 0; i < favoritePaths.length; i++) {
+      var p = toFsPath(favoritePaths[i]);
+      out.push({ name: getBaseName(p), path: p, isDir: true, favorite: true });
+    }
+    out.sort(function (a, b) {
+      var an = (a.name || '').toLowerCase();
+      var bn = (b.name || '').toLowerCase();
+      return an < bn ? -1 : (an > bn ? 1 : 0);
+    });
+    return out;
   }
 
   function updateListUI() {
@@ -756,16 +981,20 @@
   }
 
   function refreshDirectoryData() {
-    allItems = scanDirectory(currentPath);
+    if (favMode) allItems = favBrowseActive ? scanDirectory(currentPath) : makeFavoriteItems();
+    else allItems = scanDirectory(currentPath);
+
     var newMap = {};
     for (var i = 0; i < allItems.length; i++) {
       if (selectedMap[allItems[i].path]) newMap[allItems[i].path] = true;
     }
     selectedMap = newMap;
+
     selectedIndex = Math.min(selectedIndex, allItems.length - 1);
     if (selectedIndex < 0) selectedIndex = 0;
     scrollOffset = Math.max(0, Math.min(scrollOffset, allItems.length - visibleCount));
     if (scrollOffset < 0) scrollOffset = 0;
+
     scheduleTimeout(function () { updateListUI(); }, 16);
   }
 
@@ -789,6 +1018,32 @@
     if (helpActive) { closeHelpPopup(); return; }
     if (popupActive) { closePopup(); return; }
     if (viewerActive) { closeViewer(); return; }
+
+    if (favMode) {
+      if (favBrowseActive) {
+        if (favPathStack.length > 1) {
+          favPathStack.pop();
+          currentPath = normalizePath(favPathStack[favPathStack.length - 1]);
+          scrollOffset = 0;
+          selectedIndex = 0;
+          clearSelection();
+          refreshDirectoryData();
+          refreshPathLabel();
+        } else {
+          favBrowseActive = false;
+          favPathStack = [];
+          currentPath = normalizePath(favReturnState && favReturnState.currentPath ? favReturnState.currentPath : currentPath);
+          scrollOffset = 0;
+          selectedIndex = 0;
+          clearSelection();
+          refreshDirectoryData();
+          refreshPathLabel();
+        }
+      } else {
+        exitFavMode();
+      }
+      return;
+    }
 
     if (pathStack.length > 1) {
       pathStack.pop();
@@ -871,6 +1126,34 @@
     if (popupActive) { popupConfirm(); return; }
     var item = allItems[selectedIndex];
     if (!item) return;
+
+    if (favMode) {
+      if (!favBrowseActive) {
+        if (!item.isDir) return;
+        favBrowseActive = true;
+        favPathStack = [item.path];
+        currentPath = normalizePath(item.path);
+        scrollOffset = 0;
+        selectedIndex = 0;
+        clearSelection();
+        refreshDirectoryData();
+        refreshPathLabel();
+        return;
+      }
+
+      if (item.isDir) {
+        favPathStack.push(item.path);
+        currentPath = normalizePath(item.path);
+        scrollOffset = 0;
+        selectedIndex = 0;
+        clearSelection();
+        refreshDirectoryData();
+        refreshPathLabel();
+      } else {
+        openTextViewer(item);
+      }
+      return;
+    }
 
     if (item.isDir) {
       pathStack.push(item.path);
@@ -987,7 +1270,7 @@
 
     switch (option) {
       case 'Rename':
-        if (multiMode) { showError('No.. You cannot do this!.. you are on multiple select..'); return; }
+        if (multiMode) { showError('No.. You cannot fo this!.. you are on mutiple select..'); return; }
         promptLater('Rename ' + (item.isDir ? 'Folder' : 'File'), item.name, 255, function (newName) {
           newName = sanitizeName(newName);
           if (newName && newName !== item.name) {
@@ -1071,7 +1354,8 @@
           var defaultDest = 'file://../' + currentPath.replace(/^\/+/, '') + '/';
           promptLater('Move to path (use trailing / for folder)', defaultDest, 512, function (dest2) {
             if (dest2 && String(dest2).trim() !== '') {
-              var newTarget = resolveMoveTarget(dest2, item.name);
+              var destDir = parseUserPath(dest2);
+              var newTarget = joinPath(destDir, item.name);
               if (!newTarget) { showError('Invalid destination.'); return; }
               renameFileOrFolder(item.path, newTarget, function (err3) {
                 if (err3) showError('Move failed: ' + (err3.message || err3));
@@ -1083,7 +1367,7 @@
         break;
 
       case 'Edit':
-        if (multiMode) { showError('No.. You cannot do this!.. you are on multiple select..'); return; }
+        if (multiMode) { showError('No.. You cannot fo this!.. you are on mutiple select..'); return; }
         if (item.isDir) { showError('Cannot edit a folder.'); return; }
         readFileContent(item.path, function (err4, content) {
           if (err4) { showError('Failed to read file: ' + (err4.message || err4)); return; }
@@ -1099,7 +1383,7 @@
         break;
 
       case 'Run':
-        if (multiMode) { showError('No.. You cannot do this!.. you are on multiple select..'); return; }
+        if (multiMode) { showError('No.. You cannot fo this!.. you are on mutiple select..'); return; }
         if (!isJsFile(item)) { showError('This Is Not JS file'); return; }
         runJsFile(item);
         break;
@@ -1112,13 +1396,22 @@
         pasteCopied();
         break;
 
+      case 'Fav':
+        runFavoriteToggleAction(item, multiItems);
+        break;
+
+      case 'Unfav':
+        if (multiMode) removeFavorites(multiItems);
+        else removeFavorites([item]);
+        break;
+
       case 'Help':
         showHelpPopup();
         break;
     }
   }
 
-  // Text Viewer
+  // Text Viewer or as i call it.. File Viewer.. 
   function openTextViewer(item) {
     closeViewer();
     viewerActive = false;
@@ -1186,7 +1479,7 @@
     updateListUI();
     if (persistentPathText) persistentPathText.visible = true;
   }
- 
+
   // Background Music
   function initBgm() {
     try {
@@ -1212,6 +1505,12 @@
 
     if (helpActive) {
       if (keyCode === 13) closeHelpPopup();
+      return;
+    }
+
+    if (keyCode === 15) {
+      if (favMode) exitFavMode();
+      else enterFavMode();
       return;
     }
 
@@ -1252,15 +1551,19 @@
   }
 
   // Initialize UI
-  var backgroundImage = new Image({ url: bgImageUrl, x: 0, y: 0, width: screenWidth, height: screenHeight });
+  loadFavorites();
+
+  var backgroundImage = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
   backgroundImage.alpha = 1;
   jsmaf.root.children.push(backgroundImage);
-  backgroundImage.onerror = function () { log('Failed to load background: ' + bgImageUrl); };
+  reliableImageLoad(backgroundImage, bgImageUrl, 'background');
 
-  var openingImage = new Image({ url: openingImgUrl, x: 0, y: 0, width: screenWidth, height: screenHeight });
+  var openingImage = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
   openingImage.alpha = 1;
   jsmaf.root.children.push(openingImage);
-  openingImage.onerror = function () { log('Failed to load opening image: ' + openingImgUrl); };
+  scheduleTimeout(function () {
+    reliableImageLoad(openingImage, openingImgUrl, 'opening image');
+  }, 120);
 
   persistentPathText = new jsmaf.Text();
   persistentPathText.x = 20;
