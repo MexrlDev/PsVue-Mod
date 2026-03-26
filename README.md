@@ -105,6 +105,8 @@ i an not responsable for any ps4/ps5 that breaks after using it, follow the appl
 
 This project is open-source and licensed under the [GNU General Public License v3.0](https://github.com/Vuemony/vue-after-free/blob/main/LICENSE) (GPL-3.0).
 
+(this only apply to themes that has parts of the original vue, the payloads projects are not all under this license, and you are so free to edit them and mod them as much as you'd like)
+
 You are free to modify, distribute, and share this project and its themes. Developers may use the code and themes in their own projects, as long as they comply with the GPL-3.0 license.
 
 Please keep proper credit to the original project and contributors when redistributing or modifying the source code.
