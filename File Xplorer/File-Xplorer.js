@@ -1,15 +1,29 @@
 // PsVue File Xplorer.. or File Xplorer
 // Made by MexrlDev
-
+//
 // Fun Fact, this is a remastered version of my old first project for vue, the legacy File Explorer.
-
 
 (function () {
   'use strict';
 
+  function stopExternalBgm() {
+    try {
+      if (typeof stopBgm === 'function') stopBgm();
+    } catch (e1) {}
+    try {
+      if (typeof bgmClip !== 'undefined' && bgmClip) {
+        if (typeof bgmClip.stop === 'function') bgmClip.stop();
+        if (typeof bgmClip.close === 'function') bgmClip.close();
+        bgmClip = null;
+      }
+    } catch (e2) {}
+  }
+
   // Cleanup.
   function globalCleanup() {
     try {
+      stopExternalBgm();
+
       var bgmCandidates = ['bgmClip', '__explorerBgm', '__mainMenuBgm', '__menuBgm', 'menuBgm', 'mainBgm', '_bgm', 'bgm'];
       for (var i = 0; i < bgmCandidates.length; i++) {
         var name = bgmCandidates[i];
@@ -36,7 +50,7 @@
   }
   globalCleanup();
 
-  // Syscalls ( BTW.... get more of them (like literally all of them from my repo, on the Vue JSMAF folder ;3 )
+  // Syscalls ( Not saying i dont have that in my repo :3 )
   try { fn.register(0x05, 'open_sys', ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x06, 'close_sys', ['bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x110, 'getdents', ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
@@ -61,7 +75,7 @@
   var selectedImgUrl = baseUrl + 'list-selected.png';
   var popupBgUrl = baseUrl + 'opt.png';
   var helpImgUrl = baseUrl + 'help.png';
-  var bgmUrl = baseUrl + 'bgm.wav';
+  var bgmUrl = baseUrl + 'Fade-Away-Seether.wav';
   var favConfigPath = baseUrl + 'Fav.json';
 
   // UI
@@ -73,7 +87,7 @@
   var listWidth = screenWidth;
 
   var popupWidth = 560;
-  var popupHeight = 740;
+  var popupHeight = 790;
   var popupX = (screenWidth - popupWidth) / 2;
   var popupY = (screenHeight - popupHeight) / 2;
   var popupOptionHeight = 50;
@@ -108,7 +122,7 @@
   var popupOptionBgs = [];
   var popupOptionTexts = [];
   var popupSelected = 0;
-  var popupOptions = ['Rename', 'Delete', 'Create', 'Move', 'Edit', 'Run', 'Copy', 'Paste', 'Fav', 'Unfav', 'Help'];
+  var popupOptions = ['Rename', 'Delete', 'Create', 'Move', 'Edit', 'Run', 'Cut', 'Copy', 'Paste', 'Fav', 'Unfav', 'Create inside folder', 'Help'];
   var viewerOverlay = null;
   var viewerModalBg = null;
   var viewerTitle = null;
@@ -121,17 +135,19 @@
   var timeouts = [];
   var selectedMap = {};
   var favoritePaths = [];
-  var copiedItems = [];
+  var clipboardItems = [];
+  var clipboardMode = null;
   var navHoldKey = null;
   var navHoldInterval = null;
   var favBrowseActive = false;
   var favPathStack = [];
+  var backgroundImage = null;
+  var openingImage = null;
 
   try { new Style({ name: 'white', color: 'white', size: 28 }); } catch (e) {}
   try { new Style({ name: 'small', color: 'white', size: 22 }); } catch (e) {}
   try { new Style({ name: 'title', color: 'white', size: 34 }); } catch (e) {}
 
-  // Helpers
   function strToAddr(s) {
     s = (s === null || typeof s === 'undefined') ? '' : String(s);
     var addr = mem.malloc(s.length + 1);
@@ -270,6 +286,13 @@
   function isSelectedPath(path) { return !!selectedMap[path]; }
   function isMultiSelectMode() { return selectedCount() > 0; }
 
+  function containsFavoriteItems(items) {
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] && items[i].isDir && isFavoritePath(items[i].path)) return true;
+    }
+    return false;
+  }
+
   function toggleSelectCurrent() {
     var item = allItems[selectedIndex];
     if (!item) return;
@@ -319,6 +342,7 @@
     if (isDownload0Path(refPath || currentPath)) {
       scheduleTimeout(function () { refreshDirectoryData(); }, 140);
       scheduleTimeout(function () { refreshDirectoryData(); }, 650);
+      scheduleTimeout(function () { refreshDirectoryData(); }, 1400);
     }
   }
 
@@ -342,7 +366,171 @@
     intervals.push(navHoldInterval);
   }
 
-  // Favorites
+  function clearArray(arr) {
+    if (!arr || !arr.length) return;
+    arr.length = 0;
+  }
+
+  function stopAudioClip(clip) {
+    if (!clip) return;
+    try { clip.stop(); } catch (e1) {}
+    try { clip.pause(); } catch (e2) {}
+    try { clip.onended = null; } catch (e3) {}
+  }
+
+  function detachElement(el) {
+    if (!el) return;
+    try { el.visible = false; } catch (e) {}
+    try { el.url = ''; } catch (e2) {}
+    removeElement(el);
+  }
+
+  function hardReleaseAllAssets() {
+    try { closePopup(); } catch (e1) {}
+    try { closeViewer(); } catch (e2) {}
+    try { closeHelpPopup(); } catch (e3) {}
+
+    stopAudioClip(bgm);
+    bgm = null;
+
+    detachElement(backgroundImage);
+    detachElement(openingImage);
+    detachElement(persistentPathText);
+
+    detachElement(popupOverlay);
+    detachElement(popupBgImg);
+    detachElement(helpOverlay);
+    detachElement(helpBgImg);
+    detachElement(viewerOverlay);
+    detachElement(viewerModalBg);
+    detachElement(viewerTitle);
+    detachElement(viewerContent);
+    detachElement(viewerCloseHint);
+
+    for (var i = 0; i < rowBackgrounds.length; i++) detachElement(rowBackgrounds[i]);
+    for (var j = 0; j < rowSelectedBackgrounds.length; j++) detachElement(rowSelectedBackgrounds[j]);
+    for (var k = 0; k < rowIcons.length; k++) detachElement(rowIcons[k]);
+    for (var l = 0; l < rowTexts.length; l++) detachElement(rowTexts[l]);
+    for (var m = 0; m < popupOptionBgs.length; m++) detachElement(popupOptionBgs[m]);
+    for (var n = 0; n < popupOptionTexts.length; n++) detachElement(popupOptionTexts[n]);
+
+    clearArray(rowBackgrounds);
+    clearArray(rowSelectedBackgrounds);
+    clearArray(rowIcons);
+    clearArray(rowTexts);
+    clearArray(popupOptionBgs);
+    clearArray(popupOptionTexts);
+  }
+
+  function hardCleanupRuntime() {
+    try { stopNavRepeat(); } catch (e1) {}
+    try {
+      for (var i = 0; i < intervals.length; i++) {
+        try { jsmaf.clearInterval(intervals[i]); } catch (e2) {}
+      }
+      for (var j = 0; j < timeouts.length; j++) {
+        try { jsmaf.clearTimeout(timeouts[j]); } catch (e3) {}
+      }
+    } catch (e4) {}
+
+    clearArray(intervals);
+    clearArray(timeouts);
+
+    try { jsmaf.onKeyDown = function () {}; } catch (e5) {}
+    try { jsmaf.onKeyUp = function () {}; } catch (e6) {}
+    try { jsmaf.onMouseMove = function () {}; } catch (e7) {}
+    try { jsmaf.onMouseDown = function () {}; } catch (e8) {}
+    try { jsmaf.onEnterFrame = function () {}; } catch (e9) {}
+    try { jsmaf.onShutdown = function () {}; } catch (e10) {}
+
+    try { jsmaf.root.children.length = 0; } catch (e11) {}
+
+    backgroundImage = null;
+    openingImage = null;
+    persistentPathText = null;
+    popupOverlay = null;
+    popupBgImg = null;
+    helpOverlay = null;
+    helpBgImg = null;
+    viewerOverlay = null;
+    viewerModalBg = null;
+    viewerTitle = null;
+    viewerContent = null;
+    viewerCloseHint = null;
+  }
+
+  function findPayloadHostFiles(rootDir) {
+    var stack = [toFsPath(rootDir)];
+    var out = [];
+    var seen = {};
+
+    while (stack.length) {
+      var dir = stack.pop();
+      if (!dir || seen[dir]) continue;
+      seen[dir] = true;
+
+      var entries = scanDirectory(dir);
+      for (var i = 0; i < entries.length; i++) {
+        var it = entries[i];
+        if (!it) continue;
+
+        if (it.isDir) {
+          stack.push(it.path);
+        } else if (getBaseName(it.path).toLowerCase() === 'payload_host.js') {
+          out.push(it.path);
+        }
+      }
+    }
+    return out;
+  }
+
+  function requestExternalPayloadShutdown(path) {
+    try {
+      if (typeof window !== 'undefined') {
+        if (window.__payloadHostRegistry && typeof window.__payloadHostRegistry[path] === 'function') {
+          try { window.__payloadHostRegistry[path](); } catch (e1) {}
+          return true;
+        }
+        if (typeof window.__payloadHostShutdown === 'function') {
+          try { window.__payloadHostShutdown(path); } catch (e2) {}
+          return true;
+        }
+        if (typeof window.__payloadHostCleanup === 'function') {
+          try { window.__payloadHostCleanup(path); } catch (e3) {}
+          return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  function prelaunchPayloadSweep() {
+    var targets = findPayloadHostFiles('/download0/themes');
+    for (var i = 0; i < targets.length; i++) {
+      requestExternalPayloadShutdown(targets[i]);
+    }
+  }
+
+  function shutdownAndExit() {
+    if (restartPending) return;
+    restartPending = true;
+
+    hardReleaseAllAssets();
+    hardCleanupRuntime();
+
+    scheduleTimeout(function () {
+      try {
+        if (typeof debugging !== 'undefined' && typeof debugging.restart === 'function') {
+          debugging.restart();
+        } else {
+          include('main-menu.js');
+        }
+      } catch (e) {
+        log('Shutdown exit failed: ' + (e.message || e));
+      }
+    }, 0);
+  }
+
   function normalizeFavList(arr) {
     var out = [];
     var seen = {};
@@ -484,7 +672,11 @@
       pathStack: pathStack.slice(0),
       selectedIndex: selectedIndex,
       scrollOffset: scrollOffset,
-      selectedMap: (function () { var m = {}; for (var k in selectedMap) if (Object.prototype.hasOwnProperty.call(selectedMap, k) && selectedMap[k]) m[k] = true; return m; })()
+      selectedMap: (function () {
+        var m = {};
+        for (var k in selectedMap) if (Object.prototype.hasOwnProperty.call(selectedMap, k) && selectedMap[k]) m[k] = true;
+        return m;
+      })()
     };
     favMode = true;
     favBrowseActive = false;
@@ -513,7 +705,6 @@
     refreshPathLabel();
   }
 
-  // Filesystem
   function scanDirectory(path) {
     var results = [];
     path = toFsPath(path);
@@ -763,20 +954,83 @@
     });
   }
 
-  function performMoveItems(items, destDir, done) {
-    destDir = toFsPath(destDir);
-    var i = 0;
-    var firstErr = null;
-    function step() {
-      if (i >= items.length) return done(firstErr);
-      var item = items[i++];
-      var newPath = joinPath(destDir, item.name);
-      renameFileOrFolder(item.path, newPath, function (err) {
-        if (err && !firstErr) firstErr = err;
-        step();
-      });
+  function moveTreeItem(srcItem, destPath, overwrite, callback) {
+    if (!srcItem) return callback(new Error('Invalid source'));
+    destPath = toFsPath(destPath);
+
+    function moveNow() {
+      renameFileOrFolder(srcItem.path, destPath, callback);
     }
-    step();
+
+    if (overwrite) {
+      deletePathRecursive(destPath, function (errDel) {
+        if (errDel) return callback(errDel);
+        moveNow();
+      });
+    } else {
+      moveNow();
+    }
+  }
+
+  function moveItemsToDir(items, destDir, finalCallback) {
+    destDir = toFsPath(destDir);
+    items = items || [];
+    var destEntries = scanDirectory(destDir);
+    var destMap = {};
+    for (var i = 0; i < destEntries.length; i++) destMap[destEntries[i].name] = destEntries[i];
+
+    var nonConflict = [];
+    var conflict = [];
+    for (var j = 0; j < items.length; j++) {
+      var it = items[j];
+      if (!it) continue;
+      if (destMap[it.name]) conflict.push(it);
+      else nonConflict.push(it);
+    }
+
+    function moveSequential(list, overwrite, done) {
+      var idx = 0;
+      var firstErr = null;
+      function step() {
+        if (idx >= list.length) return done(firstErr);
+        var item = list[idx++];
+        var target = joinPath(destDir, item.name);
+        if (normalizePath(target) === normalizePath(item.path)) {
+          step();
+          return;
+        }
+        moveTreeItem(item, target, overwrite, function (err) {
+          if (err && !firstErr) firstErr = err;
+          step();
+        });
+      }
+      step();
+    }
+
+    moveSequential(nonConflict, false, function (nonErr) {
+      if (!conflict.length) {
+        if (finalCallback) finalCallback(nonErr || null, null, []);
+        return;
+      }
+
+      var conflictNames = [];
+      for (var i2 = 0; i2 < conflict.length; i2++) conflictNames.push(conflict[i2].name);
+
+      promptLater('Replace existing files?\n' + conflictNames.join('\n') + '\ntype yes or no', 'no', 8, function (answer) {
+        answer = (answer === null || typeof answer === 'undefined') ? '' : String(answer).trim().toLowerCase();
+        if (answer === 'yes') {
+          moveSequential(conflict, true, function (overErr) {
+            if (finalCallback) finalCallback(overErr || nonErr || null, null, conflictNames);
+          });
+        } else {
+          if (finalCallback) finalCallback(nonErr || null, null, conflictNames);
+        }
+      });
+    });
+  }
+
+  function performMoveItems(items, destDir, done) {
+    moveItemsToDir(items, destDir, done);
   }
 
   function performDeleteItems(items, done) {
@@ -792,7 +1046,8 @@
     step();
   }
 
-  function createFileWithPrompt() {
+  function createFileWithPromptAtPath(targetDir) {
+    targetDir = toFsPath(targetDir || currentPath);
     promptLater('New file name', '', 255, function (baseName) {
       baseName = sanitizeName(baseName);
       if (!baseName) return;
@@ -803,7 +1058,7 @@
         var fileName = baseName + ext;
         promptLater('Type empty to create blank file, or no to add content after', 'empty', 16, function (choice) {
           choice = (choice === null || typeof choice === 'undefined') ? '' : String(choice).trim().toLowerCase();
-          var filePath = joinPath(currentPath, fileName);
+          var filePath = joinPath(targetDir, fileName);
           if (choice === 'empty') {
             createFile(filePath, function (err) {
               if (err) showError('Create file failed: ' + (err.message || err));
@@ -830,6 +1085,10 @@
     });
   }
 
+  function createFileWithPrompt() {
+    createFileWithPromptAtPath(currentPath);
+  }
+
   function createFolderAndMoveSelected(folderName, itemsToMove) {
     folderName = sanitizeName(folderName);
     if (!folderName) return;
@@ -844,19 +1103,55 @@
     });
   }
 
+  function setClipboard(items, mode) {
+    clipboardItems = [];
+    clipboardMode = mode;
+    for (var i = 0; i < items.length; i++) {
+      clipboardItems.push({ name: items[i].name, path: items[i].path, isDir: items[i].isDir });
+    }
+  }
+
   function copySelection() {
     var items = isMultiSelectMode() ? getSelectedItems() : [allItems[selectedIndex]];
     items = items.filter(function (x) { return !!x; });
     if (!items.length) { showError('Nothing to copy.'); return; }
-    copiedItems = [];
-    for (var i = 0; i < items.length; i++) copiedItems.push({ name: items[i].name, path: items[i].path, isDir: items[i].isDir });
-    showError('Copied ' + copiedItems.length + ' item(s).');
+    setClipboard(items, 'copy');
+    showError('Copied ' + clipboardItems.length + ' item(s).');
   }
 
-  function pasteCopied() {
-    if (!copiedItems || !copiedItems.length) { showError('Nothing copied.'); return; }
+  function cutSelection() {
+    var items = isMultiSelectMode() ? getSelectedItems() : [allItems[selectedIndex]];
+    items = items.filter(function (x) { return !!x; });
+    if (!items.length) { showError('Nothing to cut.'); return; }
+    if (containsFavoriteItems(items)) {
+      showError('This favorite folder you could break the save of it if you do this!');
+      return;
+    }
+    setClipboard(items, 'cut');
+    showError('Cut ' + clipboardItems.length + ' item(s).');
+  }
+
+  function pasteClipboard() {
+    if (!clipboardItems || !clipboardItems.length) { showError('Nothing copied or cut.'); return; }
     var destDir = currentPath;
-    copyItemsToDir(copiedItems.slice(0), destDir, function (errOrOverwriteErr) {
+
+    if (clipboardMode === 'cut') {
+      if (isFavoritePath(destDir)) {
+        showError('This favorite folder you could break the save of it if you do this!');
+        return;
+      }
+
+      moveItemsToDir(clipboardItems.slice(0), destDir, function (errOrOverwriteErr) {
+        if (errOrOverwriteErr) showError('Paste completed with errors: ' + (errOrOverwriteErr.message || errOrOverwriteErr));
+        clearSelection();
+        clipboardItems = [];
+        clipboardMode = null;
+        postMutationRefresh(destDir);
+      });
+      return;
+    }
+
+    copyItemsToDir(clipboardItems.slice(0), destDir, function (errOrOverwriteErr) {
       if (errOrOverwriteErr) showError('Paste completed with errors: ' + (errOrOverwriteErr.message || errOrOverwriteErr));
       clearSelection();
       postMutationRefresh(destDir);
@@ -897,7 +1192,6 @@
 
   function showError(msg) { jsmaf.alert(msg); }
 
-  // UI
   function resetRowVisibility() {
     for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
     for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
@@ -940,6 +1234,7 @@
           rowSelectedBackgrounds[i].url = selectedImgUrl;
         }
         rowSelectedBackgrounds[i].visible = selected;
+
         if (!rowBackgrounds[i]) {
           rowBackgrounds[i] = new Image({ url: selectImgUrl, x: 0, y: yPos, width: listWidth, height: rowHeight });
           rowBackgrounds[i].alpha = 0.9;
@@ -948,6 +1243,7 @@
           rowBackgrounds[i].y = yPos;
         }
         rowBackgrounds[i].visible = (itemIdx === selectedIndex);
+
         var iconUrl = getFileIconUrl(item);
         if (!rowIcons[i]) {
           rowIcons[i] = new Image({ url: iconUrl, x: 20, y: yPos + (rowHeight - 56) / 2, width: 56, height: 56 });
@@ -958,6 +1254,7 @@
           rowIcons[i].y = yPos + (rowHeight - 56) / 2;
         }
         rowIcons[i].visible = true;
+
         if (!rowTexts[i]) {
           rowTexts[i] = new jsmaf.Text();
           rowTexts[i].style = 'white';
@@ -998,22 +1295,27 @@
     scheduleTimeout(function () { updateListUI(); }, 16);
   }
 
-  // Restart / unload
-  function restartScriptAfterUnload() {
-    if (restartPending) return;
-    restartPending = true;
-    fullUnload();
-    scheduleTimeout(function () {
-      try {
-        if (typeof debugging !== 'undefined' && typeof debugging.restart === 'function') debugging.restart();
-        else include('main-menu.js');
-      } catch (e) {
-        log('Restart failed: ' + (e.message || e));
-      }
-    }, 1000);
+  function goToRoot() {
+    if (helpActive) { closeHelpPopup(); }
+    if (popupActive) closePopup();
+    if (viewerActive) closeViewer();
+
+    if (favMode) exitFavMode();
+    currentPath = '/';
+    pathStack = ['/'];
+    favBrowseActive = false;
+    favPathStack = [];
+    clearSelection();
+    selectedIndex = 0;
+    scrollOffset = 0;
+    refreshDirectoryData();
+    refreshPathLabel();
   }
 
-  // Navigation
+  function restartScriptAfterUnload() {
+    shutdownAndExit();
+  }
+
   function navigateUp() {
     if (helpActive) { closeHelpPopup(); return; }
     if (popupActive) { closePopup(); return; }
@@ -1053,7 +1355,7 @@
       clearSelection();
       refreshDirectoryData();
     } else {
-      restartScriptAfterUnload();
+      shutdownAndExit();
     }
     refreshPathLabel();
   }
@@ -1168,7 +1470,6 @@
     }
   }
 
-  // Popup / Help
   function showPopup() {
     if (viewerActive || popupActive || helpActive) return;
     popupActive = true;
@@ -1270,7 +1571,11 @@
 
     switch (option) {
       case 'Rename':
-        if (multiMode) { showError('No.. You cannot fo this!.. you are on mutiple select..'); return; }
+        if (multiMode) { showError('No.. You cannot do this!.. you are on mutiple select..'); return; }
+        if (isFavoritePath(item.path)) {
+          showError('This favorite folder you could break the save of it if you do this!');
+          return;
+        }
         promptLater('Rename ' + (item.isDir ? 'Folder' : 'File'), item.name, 255, function (newName) {
           newName = sanitizeName(newName);
           if (newName && newName !== item.name) {
@@ -1339,11 +1644,19 @@
 
       case 'Move':
         if (multiMode) {
+          if (containsFavoriteItems(multiItems)) {
+            showError('This favorite folder you could break the save of it if you do this!');
+            return;
+          }
           var defaultDestMulti = 'file://../' + currentPath.replace(/^\/+/, '') + '/';
           promptLater('Move selected items to path (use trailing /)', defaultDestMulti, 512, function (dest) {
             if (dest && String(dest).trim() !== '') {
               var destDir = parseUserPath(dest);
-              performMoveItems(multiItems.slice(0), destDir, function (moveErr) {
+              if (isFavoritePath(destDir)) {
+                showError('This favorite folder you could break the save of it if you do this!');
+                return;
+              }
+              moveItemsToDir(multiItems.slice(0), destDir, function (moveErr) {
                 clearSelection();
                 postMutationRefresh(destDir);
                 if (moveErr) showError('Move completed with errors: ' + (moveErr.message || moveErr));
@@ -1351,11 +1664,19 @@
             }
           });
         } else {
+          if (isFavoritePath(item.path)) {
+            showError('This favorite folder you could break the save of it if you do this!');
+            return;
+          }
           var defaultDest = 'file://../' + currentPath.replace(/^\/+/, '') + '/';
           promptLater('Move to path (use trailing / for folder)', defaultDest, 512, function (dest2) {
             if (dest2 && String(dest2).trim() !== '') {
-              var destDir = parseUserPath(dest2);
-              var newTarget = joinPath(destDir, item.name);
+              var destDir2 = parseUserPath(dest2);
+              if (isFavoritePath(destDir2)) {
+                showError('This favorite folder you could break the save of it if you do this!');
+                return;
+              }
+              var newTarget = joinPath(destDir2, item.name);
               if (!newTarget) { showError('Invalid destination.'); return; }
               renameFileOrFolder(item.path, newTarget, function (err3) {
                 if (err3) showError('Move failed: ' + (err3.message || err3));
@@ -1388,12 +1709,20 @@
         runJsFile(item);
         break;
 
+      case 'Cut':
+        if (multiMode && containsFavoriteItems(multiItems)) {
+          showError('This favorite folder you could break the save of it if you do this!');
+          return;
+        }
+        cutSelection();
+        break;
+
       case 'Copy':
         copySelection();
         break;
 
       case 'Paste':
-        pasteCopied();
+        pasteClipboard();
         break;
 
       case 'Fav':
@@ -1405,13 +1734,18 @@
         else removeFavorites([item]);
         break;
 
+      case 'Create inside folder':
+        if (multiMode) { showError('No.. You cannot fo this!.. you are on mutiple select..'); return; }
+        if (item && !item.isDir) { showError('This option only works on folders.'); return; }
+        createFileWithPromptAtPath(item && item.isDir ? item.path : currentPath);
+        break;
+
       case 'Help':
         showHelpPopup();
         break;
     }
   }
 
-  // Text Viewer or as i call it.. File Viewer.. 
   function openTextViewer(item) {
     closeViewer();
     viewerActive = false;
@@ -1424,20 +1758,24 @@
       for (var k = 0; k < rowIcons.length; k++) if (rowIcons[k]) rowIcons[k].visible = false;
       for (var l = 0; l < rowTexts.length; l++) if (rowTexts[l]) rowTexts[l].visible = false;
       if (persistentPathText) persistentPathText.visible = false;
+
       viewerOverlay = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
       viewerOverlay.alpha = 0.7;
       viewerOverlay.background = 'black';
       jsmaf.root.children.push(viewerOverlay);
+
       viewerModalBg = new Image({ url: '', x: 200, y: 100, width: 1520, height: 880 });
       viewerModalBg.background = 'gray';
       viewerModalBg.alpha = 0.95;
       jsmaf.root.children.push(viewerModalBg);
+
       viewerTitle = new jsmaf.Text();
       viewerTitle.text = item.name;
       viewerTitle.x = 240;
       viewerTitle.y = 130;
       viewerTitle.style = 'title';
       jsmaf.root.children.push(viewerTitle);
+
       viewerContent = new jsmaf.Text();
       viewerContent.x = 240;
       viewerContent.y = 180;
@@ -1446,10 +1784,12 @@
       viewerContent.width = 1440;
       viewerContent.text = '';
       jsmaf.root.children.push(viewerContent);
+
       scheduleTimeout(function () {
         try { viewerContent.text = (text && text.length > 0) ? text : '(empty)'; }
         catch (e) { viewerContent.text = '(error rendering text)'; }
       }, 50);
+
       viewerCloseHint = new jsmaf.Text();
       viewerCloseHint.text = 'Circle to close, Up/Down to scroll';
       viewerCloseHint.x = 240;
@@ -1480,7 +1820,6 @@
     if (persistentPathText) persistentPathText.visible = true;
   }
 
-  // Background Music
   function initBgm() {
     try {
       bgm = new jsmaf.AudioClip();
@@ -1499,12 +1838,16 @@
     }
   }
 
-  // Input Handling
   jsmaf.onKeyDown = function (keyCode) {
     if (restartPending) return;
 
     if (helpActive) {
       if (keyCode === 13) closeHelpPopup();
+      return;
+    }
+
+    if (keyCode === 12) {
+      goToRoot();
       return;
     }
 
@@ -1528,19 +1871,34 @@
     if (keyCode === navHoldKey) stopNavRepeat();
   };
 
-  // Lifecycle
   function fullUnload() {
     try {
-      if (bgm) { bgm.stop(); bgm = null; }
+      hardReleaseAllAssets();
+
       for (var i = 0; i < intervals.length; i++) {
         try { jsmaf.clearInterval(intervals[i]); } catch (e1) {}
       }
-      stopNavRepeat();
       for (var j = 0; j < timeouts.length; j++) {
         try { jsmaf.clearTimeout(timeouts[j]); } catch (e2) {}
       }
+
+      clearArray(intervals);
+      clearArray(timeouts);
+      clearSelection();
+      clipboardItems = [];
+      clipboardMode = null;
+      selectedIndex = 0;
+      scrollOffset = 0;
+      lastSelectedIndex = -1;
+      allItems = [];
+      favMode = false;
+      favBrowseActive = false;
+      favPathStack = [];
+      favReturnState = null;
+
       try { jsmaf.root.children.length = 0; } catch (e3) {}
       try { globalCleanup(); } catch (e4) {}
+
       jsmaf.onKeyDown = function () {};
       jsmaf.onKeyUp = function () {};
       jsmaf.onMouseMove = function () {};
@@ -1550,15 +1908,15 @@
     } catch (e) {}
   }
 
-  // Initialize UI
+  prelaunchPayloadSweep();
   loadFavorites();
 
-  var backgroundImage = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+  backgroundImage = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
   backgroundImage.alpha = 1;
   jsmaf.root.children.push(backgroundImage);
   reliableImageLoad(backgroundImage, bgImageUrl, 'background');
 
-  var openingImage = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+  openingImage = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
   openingImage.alpha = 1;
   jsmaf.root.children.push(openingImage);
   scheduleTimeout(function () {
