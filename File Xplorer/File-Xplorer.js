@@ -75,7 +75,7 @@
   var selectedImgUrl = baseUrl + 'list-selected.png';
   var popupBgUrl = baseUrl + 'opt.png';
   var helpImgUrl = baseUrl + 'help.png';
-  var bgmUrl = baseUrl + 'Fade-Away-Seether.wav';
+  var bgmUrl = baseUrl + 'bgm.wav';
   var favConfigPath = baseUrl + 'Fav.json';
 
   // UI
