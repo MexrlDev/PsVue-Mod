@@ -1,6 +1,7 @@
 # Apollo Save Tool Pc PYTHON port V2 | Dec, 19, 2025 
 # Apollo: bucanero
 # Python port: MexrlDev 2025
+# Free for anyone to use, mod, edit privatly, publish with credits to original creators.
 
 import pygame
 import sys
