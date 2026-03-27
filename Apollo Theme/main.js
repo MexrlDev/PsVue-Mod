@@ -1,3 +1,6 @@
+// Made by MexrlDev
+// Made for people to enjoy. for people to mod. for people to learn from.
+
 (function () {
   // ==================== CONFIGURATION ====================
   var WIDTH = 1920;
@@ -6,13 +9,16 @@
   // Base paths
   var BASE_PATH = 'file:///../download0/';
   var IMG_PATH = BASE_PATH + 'themes/apollo/static/images/';
-  var SONG_PATH = BASE_PATH + 'themes/apollo/song/bg.wav';
+  // CHANGE PATH TO themes/apollo/music/bgm.wav and add bgm.wav song you want to the music folder. youll be able to use your own song after, also do the same for payload host js, and the about js.
+  var SONG_PATH = BASE_PATH + 'sfx/bgm.wav';
 
+  // Ofc use these for editing the columns.. the things under the jars
   var TARGET_HEIGHT = 200;
   var COLUMN_GAP = 30;
   var COLUMN1_EXTRA_GAP = 70;
   var COLUMN6_EXTRA_GAP = 100;
 
+  // this js to edit how much is there between gabs, and fhe places + the size... helpful for devs
   var column_offsets = [50, 15, 30, 0, 60, 0, 80];
   var column_scales = [1.0, 1.0, 1.0, 1.1, 1.0, 1.0, 1.0];
 
@@ -44,17 +50,21 @@
   var background, introImg, logoImg, logoTextImg;
   var blackBarTop, blackBarBottom;
   var whiteOverlay;
-  var exitLogo; // logo used during exit animation
-  var exitBarTop, exitBarBottom; // bars for exit animation
-  var whiteFlash;  // white flash after intro
+  var exitLogo;
+  var exitBarTop, exitBarBottom;
+  var whiteFlash;
   var whiteFlashStart = null;
 
-  // Music – robust handling
+  // Music
   var bgm = null;
-
+  var musicDuration = 0;
+  var musicTimer = null;
+  var musicPlaybackAnchor = 0;
+  var musicPausedAccum = 0;
+  var musicPlaying = false;
+  var musicLoading = false;
+  var musicEndHandled = false;
   var mainLoopInterval = null, mousePollInterval = null;
-
-  // Flags to prevent scheduling multiple exit calls
   var shutdownExitScheduled = false;
   var exitAnimExitScheduled = false;
 
@@ -203,7 +213,7 @@
     }
   }
 
-  // ==================== GLOBAL BGM STOPPER (idempotent) ====================
+  // ==================== GLOBAL BGM STOPPER ====================
   (function createGlobalStopper() {
     try {
       if (!window.__apollo_stop_all_bgm) {
@@ -216,41 +226,165 @@
           try { bgm = null; } catch (e) {}
         };
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
   })();
 
-  // ==================== MUSIC ====================
+  // ==================== WAV DURATION HELPER ====================
+  // Reads first few bytes of a file to determine duration (only works with standard WAV)
+  function getWavDuration(path) {
+    // We'll use the same approach as the helper script: read file via syscalls
+    if (typeof fn === 'undefined') {
+      log('fn not available, cannot get WAV duration');
+      return 0;
+    }
+    try {
+      var path_addr = mem.malloc(path.length + 1);
+      for (var i = 0; i < path.length; i++) {
+        mem.view(path_addr).setUint8(i, path.charCodeAt(i));
+      }
+      mem.view(path_addr).setUint8(path.length, 0);
+      var fd = fn.open_sys(path_addr, new BigInt(0, 0), new BigInt(0, 0));
+      if (fd.eq(new BigInt(0xffffffff, 0xffffffff))) {
+        log('Cannot open WAV file for duration');
+        return 0;
+      }
+      var buf = mem.malloc(512);
+      var read_len = fn.read_sys(fd, buf, new BigInt(0, 512));
+      fn.close_sys(fd);
+      if (read_len.eq(new BigInt(0xffffffff, 0xffffffff)) || read_len.lo < 44) {
+        log('Failed to read enough WAV header');
+        return 0;
+      }
+      var header = [];
+      for (var j = 0; j < read_len.lo; j++) {
+        header.push(mem.view(buf).getUint8(j));
+      }
+      // Check RIFF and WAVE
+      if (header[0] !== 0x52 || header[1] !== 0x49 || header[2] !== 0x46 || header[3] !== 0x46) return 0;
+      if (header[8] !== 0x57 || header[9] !== 0x41 || header[10] !== 0x56 || header[11] !== 0x45) return 0;
+
+      var audioFormat = header[20] + (header[21] << 8);
+      if (audioFormat !== 1) return 0;
+      var numChannels = header[22] + (header[23] << 8);
+      var sampleRate = header[24] + (header[25] << 8) + (header[26] << 16) + (header[27] << 24);
+      var bitsPerSample = header[34] + (header[35] << 8);
+
+      var offset = 12;
+      var dataSize = 0;
+      while (offset + 8 <= read_len.lo) {
+        var chunkId = String.fromCharCode(header[offset], header[offset+1], header[offset+2], header[offset+3]);
+        var chunkSize = header[offset+4] + (header[offset+5] << 8) + (header[offset+6] << 16) + (header[offset+7] << 24);
+        if (chunkId === 'data') {
+          dataSize = chunkSize >>> 0;
+          break;
+        }
+        if (chunkSize <= 0) break;
+        offset += 8 + chunkSize;
+      }
+      if (!dataSize || !sampleRate || !numChannels || !bitsPerSample) return 0;
+      var bytesPerSec = sampleRate * numChannels * (bitsPerSample / 8);
+      if (!bytesPerSec) return 0;
+      return dataSize / bytesPerSec;
+    } catch (e) {
+      log('Error reading WAV duration: ' + e.message);
+      return 0;
+    }
+  }
+
+  // ==================== MUSIC HANDLING (robust loop) ====================
+  function stopMusicTimer() {
+    if (musicTimer) {
+      if (typeof jsmaf !== 'undefined' && jsmaf.clearInterval) jsmaf.clearInterval(musicTimer);
+      else clearInterval(musicTimer);
+      musicTimer = null;
+    }
+  }
+
+  function startMusicTimer() {
+    if (musicTimer) stopMusicTimer();
+    musicTimer = jsmaf.setInterval(function() {
+      if (!musicPlaying || !bgm) return;
+      var now = Date.now();
+      var elapsed = now - musicPlaybackAnchor + musicPausedAccum;
+      var posSec = elapsed / 1000;
+      if (musicDuration > 0 && posSec >= musicDuration - 0.2 && !musicEndHandled) {
+        musicEndHandled = true;
+        restartSong();
+      }
+    }, 250);
+  }
+
+  function stopAudio() {
+    if (bgm) {
+      try {
+        if (typeof bgm.stop === 'function') bgm.stop();
+        if (typeof bgm.close === 'function') bgm.close();
+      } catch (e) {}
+      bgm = null;
+    }
+    musicPlaying = false;
+    stopMusicTimer();
+  }
+
+  function restartSong() {
+    if (musicLoading) return;
+    musicLoading = true;
+    log('Restarting song (looping...)');
+    stopAudio();
+    jsmaf.setTimeout(function() {
+      startMusic();
+      musicLoading = false;
+    }, 50);
+  }
+
   function startMusic() {
-    // Stop any previous Apollo bgm instances first to avoid duplicates/race conditions
     try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
+
+    if (musicLoading) return;
+    musicLoading = true;
+
+    musicDuration = getWavDuration(SONG_PATH);
+    if (musicDuration <= 0) {
+      log('Could not determine duration, using fallback 60s');
+      musicDuration = 60; // fallback
+    } else {
+      log('Song duration: ' + musicDuration + ' seconds');
+    }
 
     try {
       bgm = new jsmaf.AudioClip();
       bgm.open(SONG_PATH);
       bgm.volume = 0.5;
-      try { bgm.play(true); } catch (e) { /* ignore play errors */ }
+      bgm.play(false);
+      musicPlaying = true;
+      musicPlaybackAnchor = Date.now();
+      musicPausedAccum = 0;
+      musicEndHandled = false;
+      startMusicTimer();
+
       try { window._apollo_bgm = bgm; window.bgm = bgm; } catch (e) {}
     } catch (e) {
       log('Error loading music: ' + (e && e.message ? e.message : e));
       bgm = null;
+      musicPlaying = false;
     }
+    musicLoading = false;
   }
 
   function stopMusic() {
-    try { if (bgm && bgm.stop) { try { bgm.stop(); } catch (e) {} } } catch (e) {}
-    try { if (window._apollo_bgm && window._apollo_bgm.stop) { try { window._apollo_bgm.stop(); } catch (e) {} } } catch (e) {}
-    try { if (window.bgm && window.bgm.stop) { try { window.bgm.stop(); } catch (e) {} } } catch (e) {}
-    try { window._apollo_bgm = null; } catch (e) {}
-    try { window.bgm = null; } catch (e) {}
+    stopAudio();
+    try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
     bgm = null;
+    musicPlaying = false;
+    musicLoading = false;
+    musicEndHandled = false;
+    musicDuration = 0;
   }
 
   // ==================== EXIT ROUTINE ====================
   function exitApplication() {
     log('Exiting...');
-    try { if (bgm && bgm.stop) bgm.stop(); } catch (e) {}
+    stopMusic();
     try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
     try {
       if (typeof libc_addr === 'undefined') {
@@ -304,15 +438,12 @@
       if (exitLogo) exitLogo.visible = false;
       if (exitBarTop) exitBarTop.visible = false;
       if (exitBarBottom) exitBarBottom.visible = false;
-
-      // Start white flash if coming from INTRO
       if (prevState === 'INTRO') {
         whiteFlash.visible = true;
         whiteFlash.alpha = 1.0;
         whiteFlashStart = now;
       }
-
-      // Ensure music restarts cleanly every time we enter MAIN
+      stopMusic();
       startMusic();
 
     } else if (newState === 'SHUTDOWN') {
@@ -323,7 +454,6 @@
       blackBarBottom.height = 0;
       blackBarBottom.y = HEIGHT;
       showMainElements(false);
-      // stop music and clear global refs so next menu can start fresh
       try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
       stopMusic();
       if (whiteOverlay) whiteOverlay.visible = false;
@@ -337,7 +467,6 @@
       introImg.visible = false;
       blackBarTop.visible = false;
       blackBarBottom.visible = false;
-      // stop music and clear global refs to avoid conflicts during exit
       try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
       stopMusic();
 
@@ -389,24 +518,23 @@
 
   // ==================== JAR ACTIONS ====================
   function handleJarAction(index) {
-    // stop any apollo bgm instances before switching into included script to avoid race/duplicate audio
     try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
     stopMusic();
 
     switch (index) {
-      case 1: // Jailbreak loader.js
+      case 1:
         log('Loading loader.js');
         include('loader.js');
         break;
-      case 2: // Payload Menu payload_host.js in themes/apollo
+      case 2:
         log('Loading themes/apollo/payload_host.js');
         include('themes/apollo/payload_host.js');
         break;
-      case 5: // Settings config_ui.js in themes/apollo
+      case 5:
         log('Loading themes/apollo/config_ui.js');
         include('themes/apollo/config_ui.js');
         break;
-      case 6: // About About.js in themes/apollo
+      case 6:
         log('Loading About.js');
         include('themes/apollo/About.js');
         break;
@@ -519,5 +647,5 @@
 
   // ==================== START ====================
   setState('INTRO');
-  log('Apollo Save Tool main menu loaded – press key 13 for exit animation');
+  log('Apollo Save Tool main menu loaded');
 })();
