@@ -12,9 +12,9 @@
   var SCREEN_HEIGHT = 1080;
   var BASE_PATH = 'file:///../download0/';
   var IMG_PATH = BASE_PATH + 'themes/apollo/static/images/';
-  var SONG_PATH = BASE_PATH + 'themes/apollo/song/bg.wav';
+  var SONG_PATH = BASE_PATH + 'sfx/bgm.wav';
 
-  var APOLLO_VERSION = '0.2.0';
+  var APOLLO_VERSION = '1.0.0';
 
   // ==================== KEY CODES ====================
   var KEY_UP = 4, KEY_DOWN = 6, KEY_LEFT = 7, KEY_RIGHT = 5;
@@ -26,6 +26,12 @@
   var memorialInterval = null;
   var sx = SCREEN_WIDTH;
 
+  // Music state
+  var bgm = null;
+  var bgmStarted = false;
+  var bgmStartRetries = 0;
+  var bgmStartTimer = null;
+
   // UI elements
   var background, headerIcon, titleText, versionText;
   var logoText, ps4VersionText;
@@ -34,9 +40,6 @@
   var leonLunaImage, memorialHelp;
   var sinChars = [];
   var backHint;
-
-  // Music (local reference)
-  var bgm = null;
 
   // ==================== STYLES ====================
   new Style({ name: 'headerTitle', color: 'white', size: 48, align: 'left' });
@@ -71,6 +74,132 @@
     'aldostools', 'Bruteforce Save Data'
   ];
 
+  // ==================== MUSIC ====================
+  function cleanupMusicRefs() {
+    try { if (window._apollo_bgm === bgm) window._apollo_bgm = null; } catch (e) {}
+    try { if (window.bgm === bgm) window.bgm = null; } catch (e) {}
+  }
+
+  function stopMusic() {
+    try {
+      if (bgm && bgm.stop) bgm.stop();
+    } catch (e) {}
+    try {
+      if (window._apollo_bgm && window._apollo_bgm.stop) window._apollo_bgm.stop();
+    } catch (e) {}
+    try {
+      if (window.bgm && window.bgm.stop) window.bgm.stop();
+    } catch (e) {}
+    bgm = null;
+    bgmStarted = false;
+    cleanupMusicRefs();
+
+    try {
+      if (bgmStartTimer) {
+        jsmaf.clearTimeout(bgmStartTimer);
+        bgmStartTimer = null;
+      }
+    } catch (e) {}
+  }
+
+  function tryAttachSharedMusic() {
+    try {
+      if (window._apollo_bgm && typeof window._apollo_bgm.play === 'function') {
+        bgm = window._apollo_bgm;
+        bgmStarted = true;
+        return true;
+      }
+    } catch (e) {}
+
+    try {
+      if (window.bgm && typeof window.bgm.play === 'function') {
+        bgm = window.bgm;
+        bgmStarted = true;
+        try { window._apollo_bgm = bgm; } catch (e2) {}
+        return true;
+      }
+    } catch (e) {}
+
+    return false;
+  }
+
+  function startMusic() {
+    if (bgmStarted) return true;
+
+    if (tryAttachSharedMusic()) {
+      log('Background music attached from shared object');
+      return true;
+    }
+
+    try {
+      bgm = new jsmaf.AudioClip();
+      bgm.open(SONG_PATH);
+      bgm.volume = 0.5;
+
+      var played = false;
+      try {
+        bgm.play(true);
+        played = true;
+      } catch (e1) {
+        try {
+          bgm.play();
+          played = true;
+        } catch (e2) {}
+      }
+
+      if (!played) {
+        throw new Error('AudioClip play() failed');
+      }
+
+      try { window._apollo_bgm = bgm; } catch (e3) {}
+      try { window.bgm = bgm; } catch (e4) {}
+      bgmStarted = true;
+      log('Background music started');
+      return true;
+    } catch (e) {
+      log('Error loading music: ' + (e && e.message ? e.message : e));
+      bgmStartRetries++;
+      if (bgmStartRetries < 3) {
+        try {
+          bgmStartTimer = jsmaf.setTimeout(function () {
+            bgmStartTimer = null;
+            startMusic();
+          }, 150);
+        } catch (e2) {}
+      }
+      stopMusic();
+      return false;
+    }
+  }
+
+  function stopAllAndCleanup() {
+    try {
+      if (whiteFadeInterval) {
+        jsmaf.clearInterval(whiteFadeInterval);
+        whiteFadeInterval = null;
+      }
+    } catch (e) {}
+    try {
+      if (helpExpandInterval) {
+        jsmaf.clearInterval(helpExpandInterval);
+        helpExpandInterval = null;
+      }
+    } catch (e) {}
+    try {
+      if (creditsFadeInterval) {
+        jsmaf.clearInterval(creditsFadeInterval);
+        creditsFadeInterval = null;
+      }
+    } catch (e) {}
+    try {
+      if (memorialInterval) {
+        jsmaf.clearInterval(memorialInterval);
+        memorialInterval = null;
+      }
+    } catch (e) {}
+    stopMusic();
+  }
+
   // ==================== UI BUILD ====================
   jsmaf.root.children.length = 0;
 
@@ -102,7 +231,7 @@
   versionText.y = 110;
   jsmaf.root.children.push(versionText);
 
-  // logo_text (kept as-is)
+  // logo_text.. thats an image btw
   logoText = new Image({
     url: IMG_PATH + 'logo_text.png',
     x: (SCREEN_WIDTH - 600) / 2, y: 110,
@@ -110,17 +239,16 @@
   });
   jsmaf.root.children.push(logoText);
 
-  // ==================== HELP IMAGE (start SMALL, expand to final) ====================
+  // ==================== HELP IMAGE ====================
   var HELP_FINAL_X = 0;
   var HELP_FINAL_Y = 200;
   var HELP_FINAL_WIDTH = SCREEN_WIDTH;
   var HELP_FINAL_HEIGHT = 750;
 
-  // start small (scale)
-  var HELP_START_SCALE = 0.20; // 20% of final size to start from
+  var HELP_START_SCALE = 0.20;
   var helpStartW = Math.max(64, Math.floor(HELP_FINAL_WIDTH * HELP_START_SCALE));
   var helpStartH = Math.max(64, Math.floor(HELP_FINAL_HEIGHT * HELP_START_SCALE));
-  var helpStartX = Math.floor((SCREEN_WIDTH - helpStartW) / 2); // start centered
+  var helpStartX = Math.floor((SCREEN_WIDTH - helpStartW) / 2);
   var helpStartY = HELP_FINAL_Y + Math.floor((HELP_FINAL_HEIGHT - helpStartH) / 2);
 
   helpImage = new Image({
@@ -159,8 +287,8 @@
     leftText.style = 'creditLeft';
     leftText.x = centerX - colGap;
     leftText.y = y;
-    leftText.alpha = 0.0; // hidden until fade-in
-    leftText.visible = true; // loaded so texture ready
+    leftText.alpha = 0.0;
+    leftText.visible = true;
     jsmaf.root.children.push(leftText);
     creditNames.push(leftText);
 
@@ -187,7 +315,7 @@
     width: smallImageWidth,
     height: smallImageHeight,
     visible: true,
-    alpha: 0.0 // hidden until fade-in
+    alpha: 0.0
   });
   jsmaf.root.children.push(smallLeonLuna);
 
@@ -202,7 +330,7 @@
   memorialLine.visible = true;
   jsmaf.root.children.push(memorialLine);
 
-  // ==================== MEMORIAL SCREEN ELEMENTS (kept) ====================
+  // ==================== MEMORIAL SCREEN ELEMENTS ====================
   leonLunaImage = new Image({
     url: IMG_PATH + 'leon_luna.jpg',
     x: 0, y: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT,
@@ -218,7 +346,6 @@
   });
   jsmaf.root.children.push(memorialHelp);
 
-  // Sine animation characters (hidden until memorial)
   var memorialText = "... in memory of Leon & Luna - may your days be filled with eternal joy ...";
   for (var k = 0; k < memorialText.length; k++) {
     var ch = new jsmaf.Text();
@@ -236,55 +363,6 @@
   backHint.x = 20;
   backHint.y = SCREEN_HEIGHT - 60;
   jsmaf.root.children.push(backHint);
-
-  // ==================== GLOBAL BGM STOPPER (robust for cross-menu) ====================
-  // create a global stopper once (keeps function across menu reloads)
-  (function createGlobalStopper() {
-    try {
-      if (!window.__apollo_stop_all_bgm) {
-        window.__apollo_stop_all_bgm = function () {
-          try { if (window._apollo_bgm && window._apollo_bgm.stop) { try { window._apollo_bgm.stop(); } catch(e) {} } } catch(e) {}
-          try { if (window.bgm && window.bgm.stop) { try { window.bgm.stop(); } catch(e) {} } } catch(e) {}
-          try { if (bgm && bgm.stop) { try { bgm.stop(); } catch(e) {} } } catch(e) {}
-          // clear global references but keep stopper function itself
-          try { window._apollo_bgm = null; } catch (e) {}
-          try { window.bgm = null; } catch (e) {}
-          try { bgm = null; } catch (e) {}
-        };
-      }
-    } catch (e) {
-      // ignore
-    }
-  })();
-
-  // ==================== MUSIC FUNCTIONS (idempotent & robust) ====================
-  function startMusic() {
-    // stop any previously created apollo bgm instances first to avoid duplicates
-    try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
-
-    try {
-      // create new AudioClip and play looped
-      bgm = new jsmaf.AudioClip();
-      bgm.open(SONG_PATH);
-      bgm.volume = 0.5;
-      try { bgm.play(true); } catch (e) { /* ignore play errors */ }
-      // export references so other modules can stop it
-      try { window._apollo_bgm = bgm; window.bgm = bgm; } catch (e) {}
-    } catch (e) {
-      log('Error loading music: ' + (e && e.message ? e.message : e));
-      bgm = null;
-    }
-  }
-
-  function stopMusic() {
-    // stop local and any global references but do not delete the global stopper function
-    try { if (bgm && bgm.stop) { try { bgm.stop(); } catch (e) {} } } catch (e) {}
-    try { if (window._apollo_bgm && window._apollo_bgm.stop) { try { window._apollo_bgm.stop(); } catch (e) {} } } catch (e) {}
-    try { if (window.bgm && window.bgm.stop) { try { window.bgm.stop(); } catch (e) {} } } catch (e) {}
-    try { window._apollo_bgm = null; } catch (e) {}
-    try { window.bgm = null; } catch (e) {}
-    bgm = null;
-  }
 
   // ==================== MEMORIAL ANIMATION ====================
   function startMemorialAnimation() {
@@ -321,14 +399,13 @@
     state = 'ABOUT';
     logoText.visible = true;
     ps4VersionText.visible = true;
-    // credits & memorial remain present but their alphas controlled by animation
     helpImage.visible = true;
     smallLeonLuna.visible = true;
     memorialLine.visible = true;
 
     leonLunaImage.visible = false;
     memorialHelp.visible = false;
-    sinChars.forEach(ch => ch.visible = false);
+    for (var i = 0; i < sinChars.length; i++) sinChars[i].visible = false;
 
     stopMemorialAnimation();
   }
@@ -337,31 +414,28 @@
     state = 'MEMORIAL';
     logoText.visible = false;
     ps4VersionText.visible = false;
-    creditNames.forEach(t => t.visible = false);
-    creditValues.forEach(t => t.visible = false);
+    for (var i = 0; i < creditNames.length; i++) creditNames[i].visible = false;
+    for (var j = 0; j < creditValues.length; j++) creditValues[j].visible = false;
     helpImage.visible = false;
     smallLeonLuna.visible = false;
     memorialLine.visible = false;
 
     leonLunaImage.visible = true;
     memorialHelp.visible = true;
-    sinChars.forEach(ch => ch.visible = true);
+    for (var k = 0; k < sinChars.length; k++) sinChars[k].visible = true;
 
     startMemorialAnimation();
   }
 
   // ==================== GO BACK TO MAIN MENU ====================
   function goBack() {
-    // stop music and clear global audio refs so the main menu can start fresh without conflicts.
-    try { if (window.__apollo_stop_all_bgm) window.__apollo_stop_all_bgm(); } catch (e) {}
-    stopMusic();
-    stopMemorialAnimation();
+    stopAllAndCleanup();
 
-    // small delay before loading main to give the platform a moment to tear down audio resources
     var theme = 'default';
     if (typeof CONFIG !== 'undefined' && CONFIG.theme) {
       theme = CONFIG.theme;
     }
+
     jsmaf.setTimeout(function () {
       try {
         include('themes/' + theme + '/main.js');
@@ -386,7 +460,7 @@
     }
   };
 
-  // ==================== WHITE FADE (1.5s) ====================
+  // ==================== WHITE FADE ====================
   var whiteOverlay = new Image({
     url: IMG_PATH + 'white.png',
     x: 0,
@@ -400,7 +474,7 @@
 
   var whiteFadeInterval = null;
   function startWhiteFade() {
-    var duration = 1500; // 1.5 seconds
+    var duration = 1500;
     var start = Date.now();
     if (whiteFadeInterval) jsmaf.clearInterval(whiteFadeInterval);
     whiteFadeInterval = jsmaf.setInterval(function() {
@@ -422,7 +496,7 @@
   // ==================== HELP IMAGE EXPAND ANIMATION ====================
   var helpExpandInterval = null;
   function startHelpExpand(onComplete) {
-    var duration = 800; // expand duration in ms
+    var duration = 800;
     var start = Date.now();
 
     var sx0 = helpImage.x, sy0 = helpImage.y, sw0 = helpImage.width, sh0 = helpImage.height;
@@ -432,21 +506,18 @@
 
     helpExpandInterval = jsmaf.setInterval(function() {
       var t = Math.min(1, (Date.now() - start) / duration);
-      // easeOutCubic
       var p = 1 - Math.pow(1 - t, 3);
 
-      // interpolate bounds
       var newW = Math.round(sw0 + (tw - sw0) * p);
       var newH = Math.round(sh0 + (th - sh0) * p);
-      // center scaling so it appears to grow from center to final position
       var centerStartX = sx0 + sw0 / 2;
       var centerStartY = sy0 + sh0 / 2;
       var centerTargetX = tx + tw / 2;
       var centerTargetY = ty + th / 2;
-      var centerX = centerStartX + (centerTargetX - centerStartX) * p;
-      var centerY = centerStartY + (centerTargetY - centerStartY) * p;
-      var newX = Math.round(centerX - newW / 2);
-      var newY = Math.round(centerY - newH / 2);
+      var centerX2 = centerStartX + (centerTargetX - centerStartX) * p;
+      var centerY2 = centerStartY + (centerTargetY - centerStartY) * p;
+      var newX = Math.round(centerX2 - newW / 2);
+      var newY = Math.round(centerY2 - newH / 2);
 
       helpImage.x = newX;
       helpImage.y = newY;
@@ -456,7 +527,6 @@
       if (t >= 1) {
         jsmaf.clearInterval(helpExpandInterval);
         helpExpandInterval = null;
-        // ensure exact final
         helpImage.x = tx;
         helpImage.y = ty;
         helpImage.width = tw;
@@ -466,15 +536,13 @@
     }, 16);
   }
 
-  // ==================== CREDITS & MEMORIAL FADE-IN (2s) ====================
+  // ==================== CREDITS & MEMORIAL FADE-IN ====================
   var creditsFadeInterval = null;
   function fadeInCreditsAndMemorial(durationMs) {
-    // elements to fade: creditNames, creditValues, memorialLine, smallLeonLuna
     var start = Date.now();
     if (creditsFadeInterval) jsmaf.clearInterval(creditsFadeInterval);
     creditsFadeInterval = jsmaf.setInterval(function() {
       var t = Math.min(1, (Date.now() - start) / durationMs);
-      // slight ease-in
       var p = Math.pow(t, 0.9);
 
       for (var i = 0; i < creditNames.length; i++) {
@@ -489,7 +557,6 @@
       if (t >= 1) {
         jsmaf.clearInterval(creditsFadeInterval);
         creditsFadeInterval = null;
-        // ensure final alphas
         for (var k = 0; k < creditNames.length; k++) creditNames[k].alpha = 1.0;
         for (var m = 0; m < creditValues.length; m++) creditValues[m].alpha = 1.0;
         memorialLine.alpha = 1.0;
@@ -500,16 +567,13 @@
 
   // ==================== INIT SEQUENCE ====================
   showNormal();
-
-  // start white fade (1.5s) and simultaneously expand helpImage.
-  // After expand completes, fade in credits & memorial for 2s.
   startWhiteFade();
   startHelpExpand(function() {
     fadeInCreditsAndMemorial(2000);
   });
 
-  // Start music using robust global pattern so re-enter and exit across menus behave correctly
+  bgmStartRetries = 0;
   startMusic();
 
-  log('About menu loaded with animations and robust music handling');
+  log('About menu loaded – music started');
 })();
