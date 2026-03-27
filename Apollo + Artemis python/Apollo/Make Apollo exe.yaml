@@ -1,0 +1,59 @@
+# --- UNTESTED ---
+# --- put all the files in a folder called Source in root of your repo  ---
+name: Build EXE Apollo Save Tool (x86 + x64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        arch: [x64, x86]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # --- Setup Python ---
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        architecture: ${{ matrix.arch }}
+
+    # --- Install dependencies ---
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller pygame
+
+    # --- Build EXE with PyInstaller ---
+    - name: Build EXE
+      shell: pwsh
+      run: |
+        pyinstaller --onefile --noconsole `
+        --name ApolloSaveTool_${{ matrix.arch }} `
+        --icon Source/icon.ico `
+        --add-data "Source/static;static" `
+        Source/main.py
+
+    # --- Prepare release folder ---
+    - name: Prepare package
+      run: |
+        mkdir release
+        copy dist\ApolloSaveTool_${{ matrix.arch }}.exe release\
+
+    # --- Zip artifact ---
+    - name: Create ZIP
+      run: |
+        powershell Compress-Archive -Path release\* -DestinationPath ApolloSaveTool_${{ matrix.arch }}.zip
+
+    # --- Upload artifact ---
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ApolloSaveTool-${{ matrix.arch }}
+        path: ApolloSaveTool_${{ matrix.arch }}.zip
