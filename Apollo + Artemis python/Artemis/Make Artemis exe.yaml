@@ -35,7 +35,7 @@ jobs:
       run: |
         pyinstaller --onefile --noconsole `
         --name Artemis_${{ matrix.arch }} `
-        --icon source/data/app.ico `
+        --icon source/data/app_icon.ico `
         --add-data "source/data;data" `
         source/main.py
 
