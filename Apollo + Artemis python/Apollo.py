@@ -334,7 +334,8 @@ while running:
         text1_rect = text1.get_rect(midtop=(help_rect.centerx, help_rect.top + 40))
         screen.blit(text1, text1_rect)
 
-        text1b = small_font.render("(Made By MexrlDev)", True, (255, 255, 255))
+        text1b = small_font.render(" ", True, (255, 255, 255)) # Removed text, repsecting to the original apollo creator.
+        
         text1b_rect = text1b.get_rect(midtop=(help_rect.centerx, text1_rect.bottom + 10))
         screen.blit(text1b, text1b_rect)
 
