@@ -1,4 +1,5 @@
 # --- This makes both 32 and 64 bit zip files.---
+# --- PUT THE PYTHON IN ROOT OF REPO source/* 
 name: Build EXE (x86 + x64)
 
 on:
