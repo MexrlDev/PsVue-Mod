@@ -1,8 +1,6 @@
-// a script made by earthonion to stream m3u8 online, pulled from the new drop of the installer of VUE AFTER FREE.
-
-// Modified by MexrlDev
 
 (function () {
+  // --- Clean up any existing BGM to avoid conflicts ---
   if (typeof stopBgm === 'function') {
     try { stopBgm(); } catch (e) {}
   }
@@ -17,31 +15,47 @@
     bgmClip = null;
   }
 
-  // === CONFIGURATION ===
+  // ==================== CONFIGURATION ====================
   var VIDEO_URLS = [
     "http://content.jwplatform.com/manifests/yp34SRmf.m3u8",
     "http://earthonion.com/download0/stream.m3u8"
   ];
-  var SPLASH_PATH = "file://../download0/payloads/Vid-Player/splash.jpg";
-  var SPLASH_DURATION = 3000;
 
+  // Default settings (can be changed at runtime)
+  var SETTINGS = {
+    bufferTime: 60,
+    watchdogThreshold: 30000,
+    maxRetries: 10,
+    retryBaseDelay: 5000,
+    crossfadeDuration: 500,
+    autoMode: false,
+    loopMode: false
+  };
+
+  // ==================== INTERNAL STATE ====================
+  var activeVideo = null;
+  var nextVideo = null;
   var currentIndex = 0;
-  var _video = null;
-  var autoMode = false;
-  var loopMode = false;
-  var splashActive = false;
   var fadeText = null;
   var fadeTimeouts = [];
   var _switching = false;
-  var _audioRetryCount = 0;
-  var _audioCheckInterval = null;
+  var retryCount = 0;
+  var retryTimeout = null;
+  var networkConnected = true;
+  var settingsVisible = false;
+  var settingsText = null;
 
-  // === get current URL ===
+  // Watchdog state
+  var watchdogTimer = null;
+  var lastProgressTime = 0;
+  var lastCurrentTime = 0;
+
+  // ==================== HELPER FUNCTIONS ====================
   function getCurrentUrl() {
     return VIDEO_URLS[currentIndex];
   }
 
-  // === fade message ===
+  // ---- UI Feedback ----
   function showFadeMessage(msg, isError) {
     for (var i = 0; i < fadeTimeouts.length; i++) {
       clearTimeout(fadeTimeouts[i]);
@@ -62,13 +76,7 @@
       jsmaf.root.children.push(fadeText);
     }
 
-    // Change color for errors
-    if (isError) {
-      fadeText.color = "#FF6666";
-    } else {
-      fadeText.color = "#00FF00";
-    }
-
+    fadeText.color = isError ? "#FF6666" : "#00FF00";
     fadeText.text = msg;
     fadeText.opacity = 0;
     fadeText.visible = true;
@@ -99,314 +107,348 @@
     fadeTimeouts.push(fadeInInterval);
   }
 
-  // === fetch and parse m3u8 manifest to find audio track URL ===
-  function fetchManifest(url, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState === 4 && xhr.status === 200) {
-        callback(xhr.responseText);
-      } else if (xhr.readyState === 4) {
-        callback(null);
-      }
-    };
-    xhr.send();
+  // ---- Settings UI ----
+  function updateSettingsDisplay() {
+    if (!settingsText) {
+      settingsText = new Text({
+        x: 10,
+        y: 100,
+        text: "",
+        font: "18px Arial",
+        color: "#FFFFFF",
+        visible: false,
+        zIndex: 1001,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        padding: 10
+      });
+      jsmaf.root.children.push(settingsText);
+    }
+
+    if (settingsVisible) {
+      settingsText.text = 
+        "=== SETTINGS ===\n" +
+        "Buffer time: " + SETTINGS.bufferTime + " sec\n" +
+        "Watchdog threshold: " + (SETTINGS.watchdogThreshold / 1000) + " sec\n" +
+        "Max retries: " + SETTINGS.maxRetries + "\n" +
+        "Auto mode: " + (SETTINGS.autoMode ? "ON" : "OFF") + "\n" +
+        "Loop mode: " + (SETTINGS.loopMode ? "ON" : "OFF") + "\n" +
+        "Press INFO again to close";
+      settingsText.visible = true;
+    } else {
+      settingsText.visible = false;
+    }
   }
 
-  // === extract audio track URL from manifest ===
-  function getAudioTrackUrl(manifest, baseUrl) {
-    var lines = manifest.split('\n');
-    var audioGroupId = null;
-    var audioUri = null;
-    
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i];
-      if (line.indexOf('#EXT-X-MEDIA:TYPE=AUDIO') !== -1) {
-        var uriMatch = line.match(/URI="([^"]+)"/);
-        var defaultMatch = line.match(/DEFAULT=([A-Z]+)/);
-        var autoSelectMatch = line.match(/AUTOSELECT=([A-Z]+)/);
-        
-        if (defaultMatch && defaultMatch[1] === 'YES') {
-          if (uriMatch && uriMatch[1]) {
-            audioUri = uriMatch[1];
-            break;
-          }
-        } else if (autoSelectMatch && autoSelectMatch[1] === 'YES') {
-          if (uriMatch && uriMatch[1] && !audioUri) {
-            audioUri = uriMatch[1];
-          }
-        } else if (uriMatch && uriMatch[1] && !audioUri) {
-          audioUri = uriMatch[1];
-        }
-      }
-    }
-    
-    if (audioUri) {
-      var basePath = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1);
-      if (audioUri.indexOf('http://') === 0 || audioUri.indexOf('https://') === 0) {
-        return audioUri;
-      }
-      return basePath + audioUri;
-    }
-    return null;
+  function toggleSettings() {
+    settingsVisible = !settingsVisible;
+    updateSettingsDisplay();
   }
 
-  // === create a separate audio element if needed (fallback) ===
-  var _altAudio = null;
-
-  function createAltAudio(url) {
-    if (_altAudio) {
-      try { _altAudio.stop(); } catch(e) {}
-      try { _altAudio.close(); } catch(e) {}
-      _altAudio = null;
+  function adjustBuffer(delta) {
+    var newVal = SETTINGS.bufferTime + delta;
+    if (newVal < 5) newVal = 5;
+    if (newVal > 300) newVal = 300;
+    SETTINGS.bufferTime = newVal;
+    if (activeVideo) {
+      activeVideo.bufferTime = SETTINGS.bufferTime;
     }
-    try {
-      _altAudio = new Audio({ url: url, autoplay: true, loop: false });
-      _altAudio.volume = 1.0;
-      _altAudio.muted = false;
-    } catch(e) {}
+    showFadeMessage("Buffer set to " + SETTINGS.bufferTime + " sec");
+    updateSettingsDisplay();
   }
 
-  // === monitor audio and retry if no sound ===
-  function startAudioMonitoring() {
-    if (_audioCheckInterval) clearInterval(_audioCheckInterval);
-    _audioRetryCount = 0;
-    _audioCheckInterval = setInterval(function() {
-      if (!_video) return;
-      if (_video.duration > 0 && _video.elapsed > 5 && _audioRetryCount < 3) {
-        if (_video.audioTracks && _video.audioTracks.length === 0) {
-          console.log("No audio tracks, reloading...");
-          _audioRetryCount++;
-          var currentUrl = getCurrentUrl();
-          try {
-            _video.close();
-            setTimeout(function() {
-              _video.open(currentUrl);
-            }, 100);
-          } catch(e) {}
-        }
+  function adjustWatchdog(delta) {
+    var newVal = SETTINGS.watchdogThreshold + delta;
+    if (newVal < 5000) newVal = 5000;
+    if (newVal > 120000) newVal = 120000;
+    SETTINGS.watchdogThreshold = newVal;
+    showFadeMessage("Watchdog set to " + (SETTINGS.watchdogThreshold / 1000) + " sec");
+    updateSettingsDisplay();
+  }
+
+  function adjustMaxRetries(delta) {
+    var newVal = SETTINGS.maxRetries + delta;
+    if (newVal < 1) newVal = 1;
+    if (newVal > 20) newVal = 20;
+    SETTINGS.maxRetries = newVal;
+    showFadeMessage("Max retries set to " + SETTINGS.maxRetries);
+    updateSettingsDisplay();
+  }
+
+  // ---- Video creation with proper buffer ----
+  function createVideoElement(x, y, width, height, bufferTime) {
+    var video = new Video({
+      x: x,
+      y: y,
+      width: width,
+      height: height,
+      visible: false,
+      autoplay: false,
+      preload: 'auto',
+      bufferTime: bufferTime,
+      audio: true
+    });
+    video.muted = false;
+    video.volume = 1.0;
+    if (video.audioTracks) {
+      try { video.audioTracks.enabled = true; } catch(e) {}
+    }
+    jsmaf.root.children.push(video);
+    return video;
+  }
+
+  // ---- Crossfade between two videos ----
+  function crossfadeToNewVideo(newVideo, newUrl, onComplete) {
+    if (!activeVideo) {
+      newVideo.open(newUrl);
+      newVideo.visible = true;
+      activeVideo = newVideo;
+      if (onComplete) onComplete();
+      return;
+    }
+
+    newVideo.open(newUrl);
+    newVideo.visible = true;
+    newVideo.opacity = 0;
+
+    var fadeInterval = setInterval(function () {
+      var step = 0.05;
+      if (activeVideo.opacity > 0) {
+        activeVideo.opacity -= step;
+        if (activeVideo.opacity < 0) activeVideo.opacity = 0;
+      }
+      if (newVideo.opacity < 1) {
+        newVideo.opacity += step;
+        if (newVideo.opacity > 1) newVideo.opacity = 1;
+      }
+      if (activeVideo.opacity <= 0 && newVideo.opacity >= 1) {
+        clearInterval(fadeInterval);
+        try {
+          activeVideo.close();
+          var idx = jsmaf.root.children.indexOf(activeVideo);
+          if (idx !== -1) jsmaf.root.children.splice(idx, 1);
+        } catch(e) {}
+        activeVideo = newVideo;
+        if (onComplete) onComplete();
+      }
+    }, 20);
+  }
+
+  // ---- Watchdog: monitors playback health ----
+  function startWatchdog() {
+    stopWatchdog();
+    lastProgressTime = Date.now();
+    lastCurrentTime = activeVideo ? (activeVideo.currentTime || 0) : 0;
+    watchdogTimer = setInterval(function () {
+      if (_switching || !activeVideo) return;
+      var state = activeVideo.state;
+      if (state !== 'Playing' && state !== 'Buffering') return;
+      var now = Date.now();
+      var currentTime = activeVideo.currentTime || 0;
+      if (activeVideo.readyState && activeVideo.readyState < 2) return;
+
+      if (currentTime === lastCurrentTime && (now - lastProgressTime) > SETTINGS.watchdogThreshold) {
+        showFadeMessage("Stream appears stuck – reconnecting", true);
+        refreshCurrentVideo();
+      } else if (currentTime !== lastCurrentTime) {
+        lastProgressTime = now;
+        lastCurrentTime = currentTime;
       }
     }, 5000);
   }
 
-  // === Video creation with audio-first loading ===
-  function createBackgroundVideo() {
+  function stopWatchdog() {
+    if (watchdogTimer) {
+      clearInterval(watchdogTimer);
+      watchdogTimer = null;
+    }
+  }
+
+  // ---- Refresh current video (close & reopen) ----
+  function refreshCurrentVideo() {
+    if (_switching || !activeVideo) return;
+    _switching = true;
+    stopWatchdog();
+    if (retryTimeout) clearTimeout(retryTimeout);
     var screenW = jsmaf.screenWidth || 1920;
     var screenH = jsmaf.screenHeight || 1080;
-
-    _video = new Video({
-      x: 0,
-      y: 0,
-      width: screenW,
-      height: screenH,
-      visible: true,
-      autoplay: true,
-      audio: true
-    });
-
-    // Force unmute and full volume
-    _video.muted = false;
-    _video.volume = 1.0;
-
-    if (_video.audioTracks) {
-      try {
-        _video.audioTracks.enabled = true;
-      } catch(e) {}
-    }
-
-    _video.onOpen = function () {
-      _video.play();
-      // Ensure audio settings stick
-      setTimeout(function() {
-        if (_video) {
-          _video.muted = false;
-          _video.volume = 1.0;
-        }
-      }, 100);
-    };
-
-    _video.onstatechange = function (state) {
-      if (_switching) return;
-      if (state === 'Ended') {
-        if (loopMode) {
-          restartCurrentVideo();
-        } else if (autoMode) {
-          nextVideo(true);
-        } else {
-          console.log("Video ended, stopped.");
-        }
-      }
-    };
-
-    jsmaf.root.children.push(_video);
-  }
-
-  // === Play current URL with audio-first loading ===
-  function playCurrentUrl(silent) {
-    if (!_video) return;
-    _switching = true;
-
-    try {
-      _video.close();
-    } catch (e) {}
-
-    var currentUrl = getCurrentUrl();
-    fetchManifest(currentUrl, function(manifest) {
-      if (manifest) {
-        var audioUrl = getAudioTrackUrl(manifest, currentUrl);
-        if (audioUrl) {
-          console.log("Found separate audio track:", audioUrl);
-        }
-      }
-      setTimeout(function () {
-        try {
-          _video.open(currentUrl);
-        } catch (e) {
-          console.log("Error opening video:", e);
-        }
-        _switching = false;
-        if (!silent) {
-          showFadeMessage("Video " + (currentIndex + 1));
-        }
-        startAudioMonitoring();
-      }, 50);
-    });
-  }
-
-  // === Restart current video ===
-  function restartCurrentVideo() {
-    if (!_video) return;
-    _switching = true;
-    try {
-      _video.close();
-    } catch (e) {}
-    setTimeout(function () {
-      try {
-        _video.open(getCurrentUrl());
-      } catch (e) {}
+    var newVideo = createVideoElement(0, 0, screenW, screenH, SETTINGS.bufferTime);
+    crossfadeToNewVideo(newVideo, getCurrentUrl(), function () {
       _switching = false;
-      showFadeMessage("Looping: Video " + (currentIndex + 1));
-    }, 50);
+      startWatchdog();
+      retryCount = 0;
+    });
   }
 
-  // === Change to a new index ===
-  function changeVideo(newIndex, silent) {
-    if (newIndex === currentIndex) return;
-    currentIndex = newIndex;
-    playCurrentUrl(silent);
+  // ---- Switch to a different video (with preload) ----
+  function switchToVideo(index, silent) {
+    if (_switching) return;
+    if (index === currentIndex && activeVideo && activeVideo.state === 'Playing') return;
+
+    _switching = true;
+    stopWatchdog();
+    if (retryTimeout) clearTimeout(retryTimeout);
+    retryCount = 0;
+
+    currentIndex = index;
+    var url = getCurrentUrl();
+
+    var screenW = jsmaf.screenWidth || 1920;
+    var screenH = jsmaf.screenHeight || 1080;
+    var newVideo = createVideoElement(0, 0, screenW, screenH, SETTINGS.bufferTime);
+
+    crossfadeToNewVideo(newVideo, url, function () {
+      _switching = false;
+      startWatchdog();
+      if (!silent) {
+        showFadeMessage("Video " + (currentIndex + 1));
+      }
+    });
   }
 
-  // === Navigation: next (D-PAD right) ===
+  // ---- Next/Prev navigation ----
   function nextVideo(silent) {
     if (VIDEO_URLS.length <= 1) return;
     var next = (currentIndex + 1) % VIDEO_URLS.length;
-    changeVideo(next, silent);
+    switchToVideo(next, silent);
     if (!silent) showFadeMessage("Next: Video " + (next + 1));
   }
 
-  // === Navigation: previous (D-Pad left) ===
   function prevVideo() {
     if (VIDEO_URLS.length <= 1) return;
     var prev = (currentIndex - 1 + VIDEO_URLS.length) % VIDEO_URLS.length;
-    changeVideo(prev, false);
+    switchToVideo(prev, false);
     showFadeMessage("Previous: Video " + (prev + 1));
   }
 
-  // === Toggle auto mode (Square) ===
+  // ---- Mode toggles ----
   function toggleAuto() {
-    autoMode = !autoMode;
-    if (autoMode && loopMode) loopMode = false;
-    showFadeMessage(autoMode ? "AUTO ENABLED" : "AUTO DISABLED");
+    SETTINGS.autoMode = !SETTINGS.autoMode;
+    if (SETTINGS.autoMode && SETTINGS.loopMode) SETTINGS.loopMode = false;
+    showFadeMessage("Auto mode: " + (SETTINGS.autoMode ? "ON" : "OFF"));
+    updateSettingsDisplay();
   }
 
-  // === Toggle loop mode (Triangle) ===
   function toggleLoop() {
-    loopMode = !loopMode;
-    if (loopMode && autoMode) autoMode = false;
-    showFadeMessage(loopMode ? "LOOP ENABLED" : "LOOP DISABLED");
+    SETTINGS.loopMode = !SETTINGS.loopMode;
+    if (SETTINGS.loopMode && SETTINGS.autoMode) SETTINGS.autoMode = false;
+    showFadeMessage("Loop mode: " + (SETTINGS.loopMode ? "ON" : "OFF"));
+    updateSettingsDisplay();
   }
 
-  // === Toggle mute/unmute (key 8) for debugging ===
-  function toggleMute() {
-    if (_video) {
-      _video.muted = !_video.muted;
-      showFadeMessage(_video.muted ? "MUTED" : "UNMUTED");
+  // ---- Error handling & retries ----
+  function handleVideoError() {
+    if (_switching) return;
+    retryCount++;
+    if (retryCount <= SETTINGS.maxRetries) {
+      var delay = SETTINGS.retryBaseDelay * Math.pow(2, retryCount - 1);
+      var msg = "Stream error – retry " + retryCount + "/" + SETTINGS.maxRetries;
+      if (retryCount === SETTINGS.maxRetries) msg = "Last retry attempt";
+      showFadeMessage(msg, true);
+      if (retryTimeout) clearTimeout(retryTimeout);
+      retryTimeout = setTimeout(function () {
+        refreshCurrentVideo();
+      }, delay);
+    } else {
+      showFadeMessage("Stream failed – switching to next", true);
+      retryCount = 0;
+      nextVideo(false);
     }
   }
 
-  // === Key handler ===
-  function handleKeyDown(keyCode) {
-    if (splashActive) {
-      removeSplash();
-      return;
+  function onVideoEnded() {
+    if (_switching) return;
+    if (SETTINGS.loopMode) {
+      refreshCurrentVideo();   // restart same video
+    } else if (SETTINGS.autoMode) {
+      nextVideo(true);
     }
+  }
 
-    if (keyCode === 5) {
-      nextVideo();
-    } else if (keyCode === 7) {
-      prevVideo();
-    } else if (keyCode === 12) {
-      toggleLoop();
-    } else if (keyCode === 15) {
-      toggleAuto();
-    } else if (keyCode === 8) {
-      toggleMute();
-    } else if (keyCode === 13) {
-      jsmaf.setTimeout(function () {
-        if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
-          debugging.restart();
-        } else {
-          location.reload();
+  // ---- Network status handling ----
+  function onNetworkStatusChange(status) {
+    if (status === "connected") {
+      if (!networkConnected) {
+        networkConnected = true;
+        showFadeMessage("Network reconnected");
+        if (activeVideo && (activeVideo.state === 'Error' || activeVideo.state === 'Stopped')) {
+          refreshCurrentVideo();
         }
-      }, 100);
+      }
+    } else if (status === "disconnected") {
+      networkConnected = false;
+      showFadeMessage("Network disconnected", true);
     }
   }
 
-  // === Splash screen ===
-  var splashImage = null;
-
-  function removeSplash() {
-    if (!splashActive) return;
-    splashActive = false;
-    if (splashImage) {
-      try {
-        splashImage.visible = false;
-        jsmaf.root.children = jsmaf.root.children.filter(function(child) { return child !== splashImage; });
-      } catch (e) {}
-      splashImage = null;
+  // ---- Key handler ----
+  function handleKeyDown(keyCode) {
+    switch (keyCode) {
+      case 5:   // Right -> next
+        nextVideo();
+        break;
+      case 7:   // Left -> previous
+        prevVideo();
+        break;
+      case 12:  // Triangle -> loop
+        toggleLoop();
+        break;
+      case 16:  // Square -> refresh
+        showFadeMessage("Manual refresh");
+        refreshCurrentVideo();
+        break;
+      case 15:  // Circle -> auto
+        toggleAuto();
+        break;
+      case 13:  // X -> restart
+        if (retryTimeout) clearTimeout(retryTimeout);
+        jsmaf.setTimeout(function () {
+          if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
+            debugging.restart();
+          } else {
+            location.reload();
+          }
+        }, 100);
+        break;
+      case 38:  // Up -> increase buffer
+        adjustBuffer(5);
+        break;
+      case 40:  // Down -> decrease buffer
+        adjustBuffer(-5);
+        break;
+      case 99:  // INFO / Menu (often 99) – toggle settings
+        toggleSettings();
+        break;
+      default:
+        break;
     }
-    showFadeMessage("Starting: Video " + (currentIndex + 1));
-    createBackgroundVideo();
-    playCurrentUrl();
   }
 
-  function showSplash() {
-    var screenW = jsmaf.screenWidth || 1920;
-    var screenH = jsmaf.screenHeight || 1080;
-    splashImage = new Image({
-      url: SPLASH_PATH,
-      x: 0,
-      y: 0,
-      width: screenW,
-      height: screenH,
-      visible: true,
-      zIndex: 1000
-    });
-    jsmaf.root.children.push(splashImage);
-    splashActive = true;
+  // ---- Initialization ----
+  function init() {
+    try {
+      jsmaf.remotePlay = true;
+      jsmaf.onKeyDown = handleKeyDown;
+      if (typeof jsmaf.onNetworkStatusChange === 'function') {
+        jsmaf.onNetworkStatusChange = onNetworkStatusChange;
+      }
 
-    jsmaf.setTimeout(function() {
-      if (splashActive) removeSplash();
-    }, SPLASH_DURATION);
+      var screenW = jsmaf.screenWidth || 1920;
+      var screenH = jsmaf.screenHeight || 1080;
+      activeVideo = createVideoElement(0, 0, screenW, screenH, SETTINGS.bufferTime);
+      activeVideo.onOpen = function () {
+        activeVideo.play();
+        startWatchdog();
+        retryCount = 0;
+      };
+      activeVideo.onstatechange = function (state) {
+        if (state === 'Ended') onVideoEnded();
+      };
+      activeVideo.onerror = handleVideoError;
+      activeVideo.open(getCurrentUrl());
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
   }
 
-  // === Initialization ===
-  try {
-    jsmaf.remotePlay = true;
-    jsmaf.onKeyDown = handleKeyDown;
-    showSplash();
-    console.log("Loaded. Audio-first loading enabled. Press 8 to toggle mute/unmute.");
-  } catch(e) {
-    alert("Error: " + e.message);
-  }
+  init();
 })();
