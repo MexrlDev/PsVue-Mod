@@ -19,7 +19,7 @@
 
   // === CONFIGURATION ===
   var VIDEO_URLS = [
-    "http://content.jwplatform.com/manifests/yp34SRmf.m3u8",  // default
+    "http://content.jwplatform.com/manifests/yp34SRmf.m3u8",
     "http://earthonion.com/download0/stream.m3u8"
   ];
   var SPLASH_PATH = "file://../download0/payloads/Vid-Player/splash.jpg";
@@ -33,14 +33,16 @@
   var fadeText = null;
   var fadeTimeouts = [];
   var _switching = false;
+  var _audioRetryCount = 0;
+  var _audioCheckInterval = null;
 
   // === get current URL ===
   function getCurrentUrl() {
     return VIDEO_URLS[currentIndex];
   }
 
-  // === message.. ===
-  function showFadeMessage(msg) {
+  // === fade message ===
+  function showFadeMessage(msg, isError) {
     for (var i = 0; i < fadeTimeouts.length; i++) {
       clearTimeout(fadeTimeouts[i]);
     }
@@ -58,6 +60,13 @@
         zIndex: 1000
       });
       jsmaf.root.children.push(fadeText);
+    }
+
+    // Change color for errors
+    if (isError) {
+      fadeText.color = "#FF6666";
+    } else {
+      fadeText.color = "#00FF00";
     }
 
     fadeText.text = msg;
@@ -90,20 +99,134 @@
     fadeTimeouts.push(fadeInInterval);
   }
 
-  // === Video creation ===
+  // === fetch and parse m3u8 manifest to find audio track URL ===
+  function fetchManifest(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        callback(xhr.responseText);
+      } else if (xhr.readyState === 4) {
+        callback(null);
+      }
+    };
+    xhr.send();
+  }
+
+  // === extract audio track URL from manifest ===
+  function getAudioTrackUrl(manifest, baseUrl) {
+    var lines = manifest.split('\n');
+    var audioGroupId = null;
+    var audioUri = null;
+    
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.indexOf('#EXT-X-MEDIA:TYPE=AUDIO') !== -1) {
+        var uriMatch = line.match(/URI="([^"]+)"/);
+        var defaultMatch = line.match(/DEFAULT=([A-Z]+)/);
+        var autoSelectMatch = line.match(/AUTOSELECT=([A-Z]+)/);
+        
+        if (defaultMatch && defaultMatch[1] === 'YES') {
+          if (uriMatch && uriMatch[1]) {
+            audioUri = uriMatch[1];
+            break;
+          }
+        } else if (autoSelectMatch && autoSelectMatch[1] === 'YES') {
+          if (uriMatch && uriMatch[1] && !audioUri) {
+            audioUri = uriMatch[1];
+          }
+        } else if (uriMatch && uriMatch[1] && !audioUri) {
+          audioUri = uriMatch[1];
+        }
+      }
+    }
+    
+    if (audioUri) {
+      var basePath = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1);
+      if (audioUri.indexOf('http://') === 0 || audioUri.indexOf('https://') === 0) {
+        return audioUri;
+      }
+      return basePath + audioUri;
+    }
+    return null;
+  }
+
+  // === create a separate audio element if needed (fallback) ===
+  var _altAudio = null;
+
+  function createAltAudio(url) {
+    if (_altAudio) {
+      try { _altAudio.stop(); } catch(e) {}
+      try { _altAudio.close(); } catch(e) {}
+      _altAudio = null;
+    }
+    try {
+      _altAudio = new Audio({ url: url, autoplay: true, loop: false });
+      _altAudio.volume = 1.0;
+      _altAudio.muted = false;
+    } catch(e) {}
+  }
+
+  // === monitor audio and retry if no sound ===
+  function startAudioMonitoring() {
+    if (_audioCheckInterval) clearInterval(_audioCheckInterval);
+    _audioRetryCount = 0;
+    _audioCheckInterval = setInterval(function() {
+      if (!_video) return;
+      if (_video.duration > 0 && _video.elapsed > 5 && _audioRetryCount < 3) {
+        if (_video.audioTracks && _video.audioTracks.length === 0) {
+          console.log("No audio tracks, reloading...");
+          _audioRetryCount++;
+          var currentUrl = getCurrentUrl();
+          try {
+            _video.close();
+            setTimeout(function() {
+              _video.open(currentUrl);
+            }, 100);
+          } catch(e) {}
+        }
+      }
+    }, 5000);
+  }
+
+  // === Video creation with audio-first loading ===
   function createBackgroundVideo() {
     var screenW = jsmaf.screenWidth || 1920;
     var screenH = jsmaf.screenHeight || 1080;
 
-    _video = new Video({ x: 0, y: 0, width: screenW, height: screenH, visible: true, autoplay: true });
+    _video = new Video({
+      x: 0,
+      y: 0,
+      width: screenW,
+      height: screenH,
+      visible: true,
+      autoplay: true,
+      audio: true
+    });
+
+    // Force unmute and full volume
+    _video.muted = false;
+    _video.volume = 1.0;
+
+    if (_video.audioTracks) {
+      try {
+        _video.audioTracks.enabled = true;
+      } catch(e) {}
+    }
 
     _video.onOpen = function () {
       _video.play();
+      // Ensure audio settings stick
+      setTimeout(function() {
+        if (_video) {
+          _video.muted = false;
+          _video.volume = 1.0;
+        }
+      }, 100);
     };
 
     _video.onstatechange = function (state) {
       if (_switching) return;
-
       if (state === 'Ended') {
         if (loopMode) {
           restartCurrentVideo();
@@ -118,24 +241,36 @@
     jsmaf.root.children.push(_video);
   }
 
-  // === Play current URL (close old, open new) with optional delay lol. i wont let it CRASH... ===
+  // === Play current URL with audio-first loading ===
   function playCurrentUrl(silent) {
     if (!_video) return;
     _switching = true;
 
     try {
-      _video.close();   // kill previous playback
+      _video.close();
     } catch (e) {}
 
-    setTimeout(function () {
-      try {
-        _video.open(getCurrentUrl());
-      } catch (e) {}
-      _switching = false;
-      if (!silent) {
-        showFadeMessage("Video " + (currentIndex + 1));
+    var currentUrl = getCurrentUrl();
+    fetchManifest(currentUrl, function(manifest) {
+      if (manifest) {
+        var audioUrl = getAudioTrackUrl(manifest, currentUrl);
+        if (audioUrl) {
+          console.log("Found separate audio track:", audioUrl);
+        }
       }
-    }, 50);
+      setTimeout(function () {
+        try {
+          _video.open(currentUrl);
+        } catch (e) {
+          console.log("Error opening video:", e);
+        }
+        _switching = false;
+        if (!silent) {
+          showFadeMessage("Video " + (currentIndex + 1));
+        }
+        startAudioMonitoring();
+      }, 50);
+    });
   }
 
   // === Restart current video ===
@@ -177,18 +312,26 @@
     showFadeMessage("Previous: Video " + (prev + 1));
   }
 
-  // === Toggle auto mode (key 15) ===
+  // === Toggle auto mode (Square) ===
   function toggleAuto() {
     autoMode = !autoMode;
     if (autoMode && loopMode) loopMode = false;
     showFadeMessage(autoMode ? "AUTO ENABLED" : "AUTO DISABLED");
   }
 
-  // === Toggle loop mode (key 12) ===
+  // === Toggle loop mode (Triangle) ===
   function toggleLoop() {
     loopMode = !loopMode;
     if (loopMode && autoMode) autoMode = false;
     showFadeMessage(loopMode ? "LOOP ENABLED" : "LOOP DISABLED");
+  }
+
+  // === Toggle mute/unmute (key 8) for debugging ===
+  function toggleMute() {
+    if (_video) {
+      _video.muted = !_video.muted;
+      showFadeMessage(_video.muted ? "MUTED" : "UNMUTED");
+    }
   }
 
   // === Key handler ===
@@ -206,6 +349,8 @@
       toggleLoop();
     } else if (keyCode === 15) {
       toggleAuto();
+    } else if (keyCode === 8) {
+      toggleMute();
     } else if (keyCode === 13) {
       jsmaf.setTimeout(function () {
         if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
@@ -260,7 +405,7 @@
     jsmaf.remotePlay = true;
     jsmaf.onKeyDown = handleKeyDown;
     showSplash();
-    console.log("Loaded.. yeah.");
+    console.log("Loaded. Audio-first loading enabled. Press 8 to toggle mute/unmute.");
   } catch(e) {
     alert("Error: " + e.message);
   }
