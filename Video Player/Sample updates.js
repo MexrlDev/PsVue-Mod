@@ -1,260 +1,273 @@
+// Sample 8, Vue (VID) Player v1.2 (alpha)
+
+// Original code that only has 1 stream on loop by Earthonion
+
+// Modified to work with multi url and coding by MexrlDev, 
+
+// bugs and issues Researching by StandVideo - Alienaareps4
 
 (function () {
-  // --- Clean up any existing BGM to avoid conflicts ---
+
+  // == (1) OPTIONAL BGM MUTE / CLEANUP ==
+  
   if (typeof stopBgm === 'function') {
     try { stopBgm(); } catch (e) {}
   }
+
   if (typeof startBgmIfEnabled !== 'undefined') {
     startBgmIfEnabled = function () {};
   }
+
   if (typeof bgmClip !== 'undefined' && bgmClip) {
     try {
       if (typeof bgmClip.stop === 'function') bgmClip.stop();
+    } catch (e1) {}
+    try {
       if (typeof bgmClip.close === 'function') bgmClip.close();
-    } catch (e) {}
+    } catch (e2) {}
+    try {
+      if (typeof bgmClip.mute === 'function') bgmClip.mute(true);
+    } catch (e3) {}
+    try {
+      bgmClip.muted = true;
+      bgmClip.volume = 0;
+    } catch (e4) {}
     bgmClip = null;
   }
 
-  // ==================== CONFIGURATION ====================
-  var VIDEO_URLS = [
-    "http://content.jwplatform.com/manifests/yp34SRmf.m3u8",
-    "http://earthonion.com/download0/stream.m3u8"
+
+  // == (2) EDIT HERE: STREAM LIST ==
+  
+  var STREAMS = [
+    "http://content.jwplatform.com/manifests/yp34SRmf.m3u8"
+    "http://earthonion.com/download0/stream.m3u8",
   ];
 
-  // Default settings (can be changed at runtime)
-  var SETTINGS = {
-    bufferTime: 60,
-    watchdogThreshold: 30000,
-    maxRetries: 10,
-    retryBaseDelay: 5000,
-    crossfadeDuration: 500,
-    autoMode: false,
-    loopMode: false
+
+  // == (3) EDIT HERE: PLAYBACK TUNING ==
+ 
+  var CONFIG = {
+    // How long we tolerate startup, buffering, or temporary silence before recovery
+    startupGraceMs: 45000,
+    playingStallMs: 90000,
+    bufferingStallMs: 120000,
+
+    // How often the watchdog checks the player
+    watchdogIntervalMs: 5000,
+
+    // Retry behavior on the same stream
+    baseRetryDelayMs: 4000,
+    maxSameUrlRetries: 6,
+
+    // Cooldown to avoid repeated rapid reopen loops
+    refreshGuardMs: 4000,
+
+    // Buffer profile for higher quality streams
+    bufferTime: 90,
+    bufferMemory: 64,
+    bufferSize: 64,
+    bufferAhead: 90,
+    minBufferTime: 8,
+    maxBufferTime: 90,
+    startBufferTime: 5
   };
 
-  // ==================== INTERNAL STATE ====================
-  var activeVideo = null;
-  var nextVideo = null;
-  var currentIndex = 0;
-  var fadeText = null;
-  var fadeTimeouts = [];
-  var _switching = false;
-  var retryCount = 0;
-  var retryTimeout = null;
-  var networkConnected = true;
-  var settingsVisible = false;
-  var settingsText = null;
+  // == (4) STATE ==
 
-  // Watchdog state
+  var index = 0;
+  var video = null;
+
+  var autoMode = false;
+  var loopMode = false;
+
+  var overlay = null;
+  var overlayTimers = [];
+
+  var switching = false;
+  var retryTimer = null;
   var watchdogTimer = null;
-  var lastProgressTime = 0;
-  var lastCurrentTime = 0;
+  var startupTimer = null;
 
-  // ==================== HELPER FUNCTIONS ====================
-  function getCurrentUrl() {
-    return VIDEO_URLS[currentIndex];
+  var sameUrlFailures = 0;
+  var connected = true;
+
+  var lastCurrentTime = 0;
+  var lastProgressAt = 0;
+  var refreshGuardUntil = 0;
+
+  // == (5) SMALL HELPERS
+
+  function now() {
+    return Date.now ? Date.now() : new Date().getTime();
   }
 
-  // ---- UI Feedback ----
-  function showFadeMessage(msg, isError) {
-    for (var i = 0; i < fadeTimeouts.length; i++) {
-      clearTimeout(fadeTimeouts[i]);
+  function currentUrl() {
+    return STREAMS[index];
+  }
+
+  function clearTimers(list) {
+    for (var i = 0; i < list.length; i++) {
+      try { clearTimeout(list[i]); } catch (e1) {}
+      try { clearInterval(list[i]); } catch (e2) {}
     }
-    fadeTimeouts = [];
+    list.length = 0;
+  }
 
-    if (!fadeText) {
-      fadeText = new Text({
-        x: 10,
-        y: 30,
-        text: "",
-        font: "20px Arial",
-        color: "#00FF00",
-        visible: true,
-        opacity: 0,
-        zIndex: 1000
-      });
-      jsmaf.root.children.push(fadeText);
+  function safeSet(obj, key, value) {
+    try {
+      obj[key] = value;
+      return true;
+    } catch (e) {
+      return false;
     }
+  }
 
-    fadeText.color = isError ? "#FF6666" : "#00FF00";
-    fadeText.text = msg;
-    fadeText.opacity = 0;
-    fadeText.visible = true;
+  function removeFromRoot(obj) {
+    if (!obj || !jsmaf || !jsmaf.root || !jsmaf.root.children) return;
+    try {
+      var pos = jsmaf.root.children.indexOf(obj);
+      if (pos !== -1) jsmaf.root.children.splice(pos, 1);
+    } catch (e) {}
+  }
 
-    var startTime = Date.now();
-    var fadeInInterval = setInterval(function () {
-      var elapsed = Date.now() - startTime;
-      var progress = Math.min(1, elapsed / 1000);
-      fadeText.opacity = progress;
-      if (progress >= 1) {
-        clearInterval(fadeInInterval);
-        var stayTimeout = setTimeout(function () {
-          var fadeOutStart = Date.now();
-          var fadeOutInterval = setInterval(function () {
-            var elapsed2 = Date.now() - fadeOutStart;
-            var progress2 = 1 - Math.min(1, elapsed2 / 1000);
-            fadeText.opacity = progress2;
-            if (progress2 <= 0) {
-              clearInterval(fadeOutInterval);
-              fadeText.visible = false;
+  function closeVideo(obj) {
+    if (!obj) return;
+    try { if (typeof obj.stop === 'function') obj.stop(); } catch (e1) {}
+    try { if (typeof obj.close === 'function') obj.close(); } catch (e2) {}
+  }
+
+  function safePlay() {
+    if (!video) return;
+    try { video.play(); } catch (e) {}
+  }
+
+  function safeOpen(url) {
+    if (!video) return false;
+    try {
+      video.open(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getBufferedAheadSeconds() {
+    try {
+      if (!video) return null;
+
+      if (typeof video.bufferedAhead === 'number') {
+        return Math.max(0, video.bufferedAhead);
+      }
+
+      if (video.buffered && typeof video.buffered.length === 'number' && typeof video.currentTime === 'number') {
+        var ct = video.currentTime || 0;
+        for (var i = 0; i < video.buffered.length; i++) {
+          var start = 0;
+          var end = 0;
+          try { start = video.buffered.start(i); } catch (e1) {}
+          try { end = video.buffered.end(i); } catch (e2) {}
+          if (ct >= start && ct <= end) {
+            return Math.max(0, end - ct);
+          }
+        }
+        return 0;
+      }
+    } catch (e) {}
+
+    return null;
+  }
+
+  // == (6) OVERLAY / STATUS TEXT ==
+
+  function ensureOverlay() {
+    if (overlay) return;
+
+    overlay = new Text({
+      x: 10,
+      y: 30,
+      text: "",
+      font: "20px Arial",
+      color: "#00FF00",
+      visible: true,
+      opacity: 0,
+      zIndex: 1000
+    });
+
+    jsmaf.root.children.push(overlay);
+  }
+
+  function showMessage(msg, isError) {
+    ensureOverlay();
+    clearTimers(overlayTimers);
+
+    overlay.color = isError ? "#FF6666" : "#00FF00";
+    overlay.text = msg;
+    overlay.opacity = 0;
+    overlay.visible = true;
+
+    var fadeInStart = now();
+    var fadeIn = setInterval(function () {
+      var p = Math.min(1, (now() - fadeInStart) / 700);
+      overlay.opacity = p;
+
+      if (p >= 1) {
+        clearInterval(fadeIn);
+
+        var hold = setTimeout(function () {
+          var fadeOutStart = now();
+          var fadeOut = setInterval(function () {
+            var p2 = 1 - Math.min(1, (now() - fadeOutStart) / 900);
+            overlay.opacity = p2;
+
+            if (p2 <= 0) {
+              clearInterval(fadeOut);
+              overlay.visible = false;
             }
           }, 16);
-          fadeTimeouts.push(fadeOutInterval);
-        }, 1000);
-        fadeTimeouts.push(stayTimeout);
+
+          overlayTimers.push(fadeOut);
+        }, 900);
+
+        overlayTimers.push(hold);
       }
     }, 16);
-    fadeTimeouts.push(fadeInInterval);
+
+    overlayTimers.push(fadeIn);
   }
 
-  // ---- Settings UI ----
-  function updateSettingsDisplay() {
-    if (!settingsText) {
-      settingsText = new Text({
-        x: 10,
-        y: 100,
-        text: "",
-        font: "18px Arial",
-        color: "#FFFFFF",
-        visible: false,
-        zIndex: 1001,
-        backgroundColor: "rgba(0,0,0,0.7)",
-        padding: 10
-      });
-      jsmaf.root.children.push(settingsText);
-    }
+  // == (7) BUFFER PROFILE ==
+  
+  function applyBufferProfile(obj) {
+    if (!obj) return;
 
-    if (settingsVisible) {
-      settingsText.text = 
-        "=== SETTINGS ===\n" +
-        "Buffer time: " + SETTINGS.bufferTime + " sec\n" +
-        "Watchdog threshold: " + (SETTINGS.watchdogThreshold / 1000) + " sec\n" +
-        "Max retries: " + SETTINGS.maxRetries + "\n" +
-        "Auto mode: " + (SETTINGS.autoMode ? "ON" : "OFF") + "\n" +
-        "Loop mode: " + (SETTINGS.loopMode ? "ON" : "OFF") + "\n" +
-        "Press INFO again to close";
-      settingsText.visible = true;
-    } else {
-      settingsText.visible = false;
-    }
+    // Standard prebuffer behavior
+    safeSet(obj, "preload", "auto");
+
+    // Buffer-related hints for different player implementations
+    safeSet(obj, "bufferTime", CONFIG.bufferTime);
+    safeSet(obj, "bufferMemory", CONFIG.bufferMemory);
+    safeSet(obj, "bufferSize", CONFIG.bufferSize);
+    safeSet(obj, "bufferAhead", CONFIG.bufferAhead);
+    safeSet(obj, "minBufferTime", CONFIG.minBufferTime);
+    safeSet(obj, "maxBufferTime", CONFIG.maxBufferTime);
+    safeSet(obj, "startBufferTime", CONFIG.startBufferTime);
+
+    // Generic buffering flags
+    safeSet(obj, "useBuffer", true);
+    safeSet(obj, "enableBuffer", true);
+    safeSet(obj, "autoBuffer", true);
+    safeSet(obj, "allowBuffering", true);
+
+    // Playback defaults
+    safeSet(obj, "muted", false);
+    safeSet(obj, "volume", 1.0);
+
+    try {
+      if (obj.audioTracks) obj.audioTracks.enabled = true;
+    } catch (e) {}
   }
 
-  function toggleSettings() {
-    settingsVisible = !settingsVisible;
-    updateSettingsDisplay();
-  }
-
-  function adjustBuffer(delta) {
-    var newVal = SETTINGS.bufferTime + delta;
-    if (newVal < 5) newVal = 5;
-    if (newVal > 300) newVal = 300;
-    SETTINGS.bufferTime = newVal;
-    if (activeVideo) {
-      activeVideo.bufferTime = SETTINGS.bufferTime;
-    }
-    showFadeMessage("Buffer set to " + SETTINGS.bufferTime + " sec");
-    updateSettingsDisplay();
-  }
-
-  function adjustWatchdog(delta) {
-    var newVal = SETTINGS.watchdogThreshold + delta;
-    if (newVal < 5000) newVal = 5000;
-    if (newVal > 120000) newVal = 120000;
-    SETTINGS.watchdogThreshold = newVal;
-    showFadeMessage("Watchdog set to " + (SETTINGS.watchdogThreshold / 1000) + " sec");
-    updateSettingsDisplay();
-  }
-
-  function adjustMaxRetries(delta) {
-    var newVal = SETTINGS.maxRetries + delta;
-    if (newVal < 1) newVal = 1;
-    if (newVal > 20) newVal = 20;
-    SETTINGS.maxRetries = newVal;
-    showFadeMessage("Max retries set to " + SETTINGS.maxRetries);
-    updateSettingsDisplay();
-  }
-
-  // ---- Video creation with proper buffer ----
-  function createVideoElement(x, y, width, height, bufferTime) {
-    var video = new Video({
-      x: x,
-      y: y,
-      width: width,
-      height: height,
-      visible: false,
-      autoplay: false,
-      preload: 'auto',
-      bufferTime: bufferTime,
-      audio: true
-    });
-    video.muted = false;
-    video.volume = 1.0;
-    if (video.audioTracks) {
-      try { video.audioTracks.enabled = true; } catch(e) {}
-    }
-    jsmaf.root.children.push(video);
-    return video;
-  }
-
-  // ---- Crossfade between two videos ----
-  function crossfadeToNewVideo(newVideo, newUrl, onComplete) {
-    if (!activeVideo) {
-      newVideo.open(newUrl);
-      newVideo.visible = true;
-      activeVideo = newVideo;
-      if (onComplete) onComplete();
-      return;
-    }
-
-    newVideo.open(newUrl);
-    newVideo.visible = true;
-    newVideo.opacity = 0;
-
-    var fadeInterval = setInterval(function () {
-      var step = 0.05;
-      if (activeVideo.opacity > 0) {
-        activeVideo.opacity -= step;
-        if (activeVideo.opacity < 0) activeVideo.opacity = 0;
-      }
-      if (newVideo.opacity < 1) {
-        newVideo.opacity += step;
-        if (newVideo.opacity > 1) newVideo.opacity = 1;
-      }
-      if (activeVideo.opacity <= 0 && newVideo.opacity >= 1) {
-        clearInterval(fadeInterval);
-        try {
-          activeVideo.close();
-          var idx = jsmaf.root.children.indexOf(activeVideo);
-          if (idx !== -1) jsmaf.root.children.splice(idx, 1);
-        } catch(e) {}
-        activeVideo = newVideo;
-        if (onComplete) onComplete();
-      }
-    }, 20);
-  }
-
-  // ---- Watchdog: monitors playback health ----
-  function startWatchdog() {
-    stopWatchdog();
-    lastProgressTime = Date.now();
-    lastCurrentTime = activeVideo ? (activeVideo.currentTime || 0) : 0;
-    watchdogTimer = setInterval(function () {
-      if (_switching || !activeVideo) return;
-      var state = activeVideo.state;
-      if (state !== 'Playing' && state !== 'Buffering') return;
-      var now = Date.now();
-      var currentTime = activeVideo.currentTime || 0;
-      if (activeVideo.readyState && activeVideo.readyState < 2) return;
-
-      if (currentTime === lastCurrentTime && (now - lastProgressTime) > SETTINGS.watchdogThreshold) {
-        showFadeMessage("Stream appears stuck – reconnecting", true);
-        refreshCurrentVideo();
-      } else if (currentTime !== lastCurrentTime) {
-        lastProgressTime = now;
-        lastCurrentTime = currentTime;
-      }
-    }, 5000);
-  }
+  // == (8) WATCHDOGS ==
 
   function stopWatchdog() {
     if (watchdogTimer) {
@@ -263,192 +276,397 @@
     }
   }
 
-  // ---- Refresh current video (close & reopen) ----
-  function refreshCurrentVideo() {
-    if (_switching || !activeVideo) return;
-    _switching = true;
-    stopWatchdog();
-    if (retryTimeout) clearTimeout(retryTimeout);
-    var screenW = jsmaf.screenWidth || 1920;
-    var screenH = jsmaf.screenHeight || 1080;
-    var newVideo = createVideoElement(0, 0, screenW, screenH, SETTINGS.bufferTime);
-    crossfadeToNewVideo(newVideo, getCurrentUrl(), function () {
-      _switching = false;
-      startWatchdog();
-      retryCount = 0;
-    });
+  function stopStartupTimer() {
+    if (startupTimer) {
+      clearTimeout(startupTimer);
+      startupTimer = null;
+    }
   }
 
-  // ---- Switch to a different video (with preload) ----
-  function switchToVideo(index, silent) {
-    if (_switching) return;
-    if (index === currentIndex && activeVideo && activeVideo.state === 'Playing') return;
-
-    _switching = true;
+  function startWatchdog() {
     stopWatchdog();
-    if (retryTimeout) clearTimeout(retryTimeout);
-    retryCount = 0;
 
-    currentIndex = index;
-    var url = getCurrentUrl();
+    lastCurrentTime = video ? (video.currentTime || 0) : 0;
+    lastProgressAt = now();
 
-    var screenW = jsmaf.screenWidth || 1920;
-    var screenH = jsmaf.screenHeight || 1080;
-    var newVideo = createVideoElement(0, 0, screenW, screenH, SETTINGS.bufferTime);
+    watchdogTimer = setInterval(function () {
+      if (switching || !video) return;
 
-    crossfadeToNewVideo(newVideo, url, function () {
-      _switching = false;
-      startWatchdog();
-      if (!silent) {
-        showFadeMessage("Video " + (currentIndex + 1));
+      var state = video.state || "";
+      if (state !== "Playing" && state !== "Buffering") return;
+
+      var ct = video.currentTime || 0;
+      var currentNow = now();
+
+      if (video.readyState && video.readyState < 2) return;
+
+      if (ct !== lastCurrentTime) {
+        lastCurrentTime = ct;
+        lastProgressAt = currentNow;
+        return;
       }
+
+      var stalledFor = currentNow - lastProgressAt;
+      var bufferedAhead = getBufferedAheadSeconds();
+
+      if (state === "Playing") {
+        if (stalledFor >= CONFIG.playingStallMs) {
+          recoverSameUrl("Playback stalled");
+        }
+        return;
+      }
+
+      if (state === "Buffering") {
+        // For high-quality streams, let it buffer much longer before recovery.
+        // If buffer is clearly progressing, stay hands-off.
+        if (bufferedAhead !== null && bufferedAhead > 0) {
+          if (stalledFor >= CONFIG.bufferingStallMs) {
+            recoverSameUrl("Buffering took too long");
+          }
+        } else {
+          if (stalledFor >= CONFIG.bufferingStallMs) {
+            recoverSameUrl("Buffering stuck");
+          }
+        }
+      }
+    }, CONFIG.watchdogIntervalMs);
+  }
+
+  function startStartupTimer() {
+    stopStartupTimer();
+
+    startupTimer = setTimeout(function () {
+      if (!video || switching) return;
+
+      var state = video.state || "";
+      var ct = video.currentTime || 0;
+
+      if (state === "Opening" || state === "Buffering" || ct === 0) {
+        recoverSameUrl("Startup timeout");
+      }
+    }, CONFIG.startupGraceMs);
+  }
+
+  // == (9) PLAYER LIFECYCLE ==
+
+  function destroyVideo() {
+    stopWatchdog();
+    stopStartupTimer();
+
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+
+    if (video) {
+      removeFromRoot(video);
+      closeVideo(video);
+      video = null;
+    }
+  }
+
+  function buildVideo() {
+    destroyVideo();
+
+    var w = jsmaf.screenWidth || 1920;
+    var h = jsmaf.screenHeight || 1080;
+
+    video = new Video({
+      x: 0,
+      y: 0,
+      width: w,
+      height: h,
+      visible: true,
+      autoplay: true,
+      audio: true,
+      preload: "auto"
     });
+
+    applyBufferProfile(video);
+
+    video.onOpen = function () {
+      switching = false;
+      lastCurrentTime = 0;
+      lastProgressAt = now();
+      applyBufferProfile(video);
+      safePlay();
+      startWatchdog();
+      startStartupTimer();
+    };
+
+    video.onstatechange = function (state) {
+      if (switching) return;
+
+      if (state === "Playing") {
+        lastCurrentTime = video.currentTime || 0;
+        lastProgressAt = now();
+        stopStartupTimer();
+      }
+
+      if (state === "Ended") {
+        if (loopMode) {
+          restartSameUrl(false);
+        } else if (autoMode) {
+          goNext(false);
+        } else {
+          restartSameUrl(false);
+        }
+      }
+
+      if (state === "Buffering") {
+        startWatchdog();
+      }
+    };
+
+    video.onerror = function () {
+      recoverSameUrl("Stream error");
+    };
+
+    jsmaf.root.children.push(video);
   }
 
-  // ---- Next/Prev navigation ----
-  function nextVideo(silent) {
-    if (VIDEO_URLS.length <= 1) return;
-    var next = (currentIndex + 1) % VIDEO_URLS.length;
-    switchToVideo(next, silent);
-    if (!silent) showFadeMessage("Next: Video " + (next + 1));
+  function openCurrentStream(silent) {
+    if (!video) buildVideo();
+
+    switching = true;
+    stopWatchdog();
+    stopStartupTimer();
+
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+
+    var url = currentUrl();
+
+    try {
+      closeVideo(video);
+    } catch (e) {}
+
+    setTimeout(function () {
+      try {
+        applyBufferProfile(video);
+        safeOpen(url);
+      } catch (e2) {}
+      switching = false;
+      refreshGuardUntil = now() + CONFIG.refreshGuardMs;
+      lastProgressAt = now();
+      startWatchdog();
+      startStartupTimer();
+
+      if (!silent) {
+        showMessage("Video " + (index + 1), false);
+      }
+    }, 120);
   }
 
-  function prevVideo() {
-    if (VIDEO_URLS.length <= 1) return;
-    var prev = (currentIndex - 1 + VIDEO_URLS.length) % VIDEO_URLS.length;
-    switchToVideo(prev, false);
-    showFadeMessage("Previous: Video " + (prev + 1));
+  function softReopenSameUrl() {
+    if (!video || switching) return;
+
+    switching = true;
+    stopWatchdog();
+    stopStartupTimer();
+
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+
+    refreshGuardUntil = now() + CONFIG.refreshGuardMs;
+
+    try {
+      applyBufferProfile(video);
+      safeOpen(currentUrl());
+    } catch (e) {}
+
+    setTimeout(function () {
+      switching = false;
+      lastProgressAt = now();
+      startWatchdog();
+      startStartupTimer();
+    }, 150);
   }
 
-  // ---- Mode toggles ----
+  function hardRebuildSameUrl() {
+    if (switching) return;
+
+    switching = true;
+    stopWatchdog();
+    stopStartupTimer();
+
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+
+    refreshGuardUntil = now() + CONFIG.refreshGuardMs;
+
+    var url = currentUrl();
+
+    destroyVideo();
+
+    setTimeout(function () {
+      buildVideo();
+      try {
+        applyBufferProfile(video);
+        safeOpen(url);
+      } catch (e2) {}
+      switching = false;
+      lastProgressAt = now();
+      startWatchdog();
+      startStartupTimer();
+    }, 200);
+  }
+
+  function restartSameUrl(silent) {
+    if (!video) return;
+    if (!silent) showMessage("Restarting stream...", false);
+    openCurrentStream(true);
+  }
+
+
+  // == (10) RECOVERY  ==
+  function scheduleRetry(fn, attempt) {
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+
+    var delay = CONFIG.baseRetryDelayMs * Math.pow(2, Math.max(0, attempt - 1));
+    retryTimer = setTimeout(function () {
+      fn();
+    }, delay);
+  }
+
+  function recoverSameUrl(reason) {
+    if (switching) return;
+
+    var current = now();
+    if (current < refreshGuardUntil) return;
+
+    sameUrlFailures += 1;
+
+    if (sameUrlFailures <= 2) {
+      showMessage(reason + " - retrying same stream", true);
+      scheduleRetry(function () {
+        softReopenSameUrl();
+      }, sameUrlFailures);
+      return;
+    }
+
+    if (sameUrlFailures <= CONFIG.maxSameUrlRetries) {
+      showMessage(reason + " - rebuilding player", true);
+      scheduleRetry(function () {
+        hardRebuildSameUrl();
+      }, sameUrlFailures);
+      return;
+    }
+
+    sameUrlFailures = 0;
+    showMessage(reason + " - switching channel", true);
+    goNext(false);
+  }
+
+  function goNext(silent) {
+    if (STREAMS.length <= 1) return;
+    sameUrlFailures = 0;
+    index = (index + 1) % STREAMS.length;
+    openCurrentStream(silent);
+    if (!silent) showMessage("Next: Video " + (index + 1), false);
+  }
+
+  function goPrev() {
+    if (STREAMS.length <= 1) return;
+    sameUrlFailures = 0;
+    index = (index - 1 + STREAMS.length) % STREAMS.length;
+    openCurrentStream(false);
+    showMessage("Previous: Video " + (index + 1), false);
+  }
+
+  // == (11) MODES / INPUT ==
+  
   function toggleAuto() {
-    SETTINGS.autoMode = !SETTINGS.autoMode;
-    if (SETTINGS.autoMode && SETTINGS.loopMode) SETTINGS.loopMode = false;
-    showFadeMessage("Auto mode: " + (SETTINGS.autoMode ? "ON" : "OFF"));
-    updateSettingsDisplay();
+    autoMode = !autoMode;
+    if (autoMode && loopMode) loopMode = false;
+    showMessage(autoMode ? "Auto mode ON" : "Auto mode OFF", false);
   }
 
   function toggleLoop() {
-    SETTINGS.loopMode = !SETTINGS.loopMode;
-    if (SETTINGS.loopMode && SETTINGS.autoMode) SETTINGS.autoMode = false;
-    showFadeMessage("Loop mode: " + (SETTINGS.loopMode ? "ON" : "OFF"));
-    updateSettingsDisplay();
+    loopMode = !loopMode;
+    if (loopMode && autoMode) autoMode = false;
+    showMessage(loopMode ? "Loop mode ON" : "Loop mode OFF", false);
   }
 
-  // ---- Error handling & retries ----
-  function handleVideoError() {
-    if (_switching) return;
-    retryCount++;
-    if (retryCount <= SETTINGS.maxRetries) {
-      var delay = SETTINGS.retryBaseDelay * Math.pow(2, retryCount - 1);
-      var msg = "Stream error – retry " + retryCount + "/" + SETTINGS.maxRetries;
-      if (retryCount === SETTINGS.maxRetries) msg = "Last retry attempt";
-      showFadeMessage(msg, true);
-      if (retryTimeout) clearTimeout(retryTimeout);
-      retryTimeout = setTimeout(function () {
-        refreshCurrentVideo();
-      }, delay);
-    } else {
-      showFadeMessage("Stream failed – switching to next", true);
-      retryCount = 0;
-      nextVideo(false);
-    }
+  function manualRefresh() {
+    sameUrlFailures = 0;
+    showMessage("Manual refresh", false);
+    openCurrentStream(true);
   }
 
-  function onVideoEnded() {
-    if (_switching) return;
-    if (SETTINGS.loopMode) {
-      refreshCurrentVideo();   // restart same video
-    } else if (SETTINGS.autoMode) {
-      nextVideo(true);
-    }
-  }
-
-  // ---- Network status handling ----
-  function onNetworkStatusChange(status) {
-    if (status === "connected") {
-      if (!networkConnected) {
-        networkConnected = true;
-        showFadeMessage("Network reconnected");
-        if (activeVideo && (activeVideo.state === 'Error' || activeVideo.state === 'Stopped')) {
-          refreshCurrentVideo();
-        }
-      }
-    } else if (status === "disconnected") {
-      networkConnected = false;
-      showFadeMessage("Network disconnected", true);
-    }
-  }
-
-  // ---- Key handler ----
   function handleKeyDown(keyCode) {
     switch (keyCode) {
-      case 5:   // Right -> next
-        nextVideo();
+      case 5:
+        goNext(false);
         break;
-      case 7:   // Left -> previous
-        prevVideo();
+      case 7:
+        goPrev();
         break;
-      case 12:  // Triangle -> loop
+      case 12:
         toggleLoop();
         break;
-      case 16:  // Square -> refresh
-        showFadeMessage("Manual refresh");
-        refreshCurrentVideo();
-        break;
-      case 15:  // Circle -> auto
+      case 15:
         toggleAuto();
         break;
-      case 13:  // X -> restart
-        if (retryTimeout) clearTimeout(retryTimeout);
+      case 16:
+        manualRefresh();
+        break;
+      case 13:
+        if (retryTimer) clearTimeout(retryTimer);
         jsmaf.setTimeout(function () {
-          if (typeof debugging !== 'undefined' && debugging && typeof debugging.restart === 'function') {
+          if (typeof debugging !== "undefined" && debugging && typeof debugging.restart === "function") {
             debugging.restart();
           } else {
             location.reload();
           }
         }, 100);
         break;
-      case 38:  // Up -> increase buffer
-        adjustBuffer(5);
-        break;
-      case 40:  // Down -> decrease buffer
-        adjustBuffer(-5);
-        break;
-      case 99:  // INFO / Menu (often 99) – toggle settings
-        toggleSettings();
-        break;
       default:
         break;
     }
   }
 
-  // ---- Initialization ----
-  function init() {
-    try {
-      jsmaf.remotePlay = true;
-      jsmaf.onKeyDown = handleKeyDown;
-      if (typeof jsmaf.onNetworkStatusChange === 'function') {
-        jsmaf.onNetworkStatusChange = onNetworkStatusChange;
+  function onNetworkStatusChange(status) {
+    if (status === "connected") {
+      if (!connected) {
+        connected = true;
+        showMessage("Network reconnected", false);
+        manualRefresh();
       }
-
-      var screenW = jsmaf.screenWidth || 1920;
-      var screenH = jsmaf.screenHeight || 1080;
-      activeVideo = createVideoElement(0, 0, screenW, screenH, SETTINGS.bufferTime);
-      activeVideo.onOpen = function () {
-        activeVideo.play();
-        startWatchdog();
-        retryCount = 0;
-      };
-      activeVideo.onstatechange = function (state) {
-        if (state === 'Ended') onVideoEnded();
-      };
-      activeVideo.onerror = handleVideoError;
-      activeVideo.open(getCurrentUrl());
-    } catch(e) {
-      alert("Error: " + e.message);
+    } else if (status === "disconnected") {
+      connected = false;
+      showMessage("Network disconnected", true);
     }
   }
 
-  init();
+  // == (12) INIT
+  
+  try {
+    jsmaf.remotePlay = true;
+    jsmaf.onKeyDown = handleKeyDown;
+
+    var previousNetworkHandler = jsmaf.onNetworkStatusChange;
+    jsmaf.onNetworkStatusChange = function (status) {
+      try {
+        if (typeof previousNetworkHandler === "function") {
+          previousNetworkHandler(status);
+        }
+      } catch (e) {}
+      onNetworkStatusChange(status);
+    };
+
+    buildVideo();
+    openCurrentStream(false);
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
 })();
