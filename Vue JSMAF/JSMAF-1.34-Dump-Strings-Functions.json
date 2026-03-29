@@ -1,0 +1,1174 @@
+[
+  {
+    "path": "jsmaf.externalParameter",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.screenAspect",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.onKeyboardDown",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.hardwareId",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.onEnterFrame",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onshutdown",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.argc",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.frameRate",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.onenterforeground",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.connectionInfo",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.connectionInfo.type",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.connectionInfo.wifi_ssid",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.connectionInfo.wifi_signal",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.connectionInfo.wifi_encryption",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.onKeyUp",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onError",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.onkeyboarddown",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.depthTest",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.onShutdown",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.screenWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.isTTSenabled",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.onkeyrepeat",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.screenHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.onkeydown",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.onKeyboardRepeat",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onkeyup",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onKeyboardUp",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onenterframe",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.platform",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.onEnterForeground",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.version",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.ontextspeech",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.circleIsAdvanceButton",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.gamma",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.onexternalparamchange",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onKeyDown",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.cookie",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.onKeyRepeat",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.networkStatus",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.fwDebugString",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.onenterbackground",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.remotePlay",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.onerror",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.onTextSpeech",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onNetworkStatusChange",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.locale",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.onExternalParamChange",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onkeyboardup",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onkeyboardrepeat",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.onnetworkstatuschange",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.scaleZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.width",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.rotateZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.clipX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.clipHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.y",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.clip",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0.width",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.y",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.clipHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.style",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.clip",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children.0.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.length",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.length",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.values",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.toString",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.toLocaleString",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.concat",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.fill",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.join",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.pop",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.push",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.reverse",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.shift",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.slice",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.sort",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.splice",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.unshift",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.every",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.forEach",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.some",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.indexOf",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.lastIndexOf",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.filter",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.reduce",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.reduceRight",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.map",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.entries",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.keys",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.find",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.findIndex",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.includes",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.copyWithin",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.constructor",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.root.children.0.clipY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.text",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.borderImage",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.borderWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.borderColor",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.z",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.baseline",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.rotateY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.scaleY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.clipWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.naturalHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.rotateX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.scaleX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.align",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.lineCount",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.scaleZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.tint",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.rotateZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.clipX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingBottom",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.alpha",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.x",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.naturalWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingRight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.background",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.0.visible",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children.0.lineClamp",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.height",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.onload",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingLeft",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.0.onLoad",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingTop",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.1.width",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.y",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.clipHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.style",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.clip",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children.1.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.1.children.length",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.clipY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.text",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.borderImage",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.borderWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.borderColor",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.z",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.baseline",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.rotateY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.scaleY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.clipWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.naturalHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.rotateX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.scaleX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.align",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.lineCount",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.scaleZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.tint",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.rotateZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.clipX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingBottom",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.alpha",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.x",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.naturalWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingRight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.background",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.1.visible",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children.1.lineClamp",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.height",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.onload",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingLeft",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.1.onLoad",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingTop",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.2.width",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.y",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.clipHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.style",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.clip",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children.2.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.2.children.length",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.clipY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.text",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.borderImage",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.borderWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.borderColor",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.z",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.baseline",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.rotateY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.scaleY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.clipWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.naturalHeight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.rotateX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.scaleX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.align",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.lineCount",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.scaleZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.tint",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.rotateZ",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.clipX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingBottom",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.alpha",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.x",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.naturalWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingRight",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.background",
+    "type": "string"
+  },
+  {
+    "path": "jsmaf.root.children.2.visible",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.children.2.lineClamp",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.height",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.onload",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingLeft",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.2.onLoad",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingTop",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.children.length",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.x",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.alpha",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.visible",
+    "type": "boolean"
+  },
+  {
+    "path": "jsmaf.root.z",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.height",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.rotateY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.scaleX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.scaleY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.clipWidth",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.rotateX",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.root.clipY",
+    "type": "number"
+  },
+  {
+    "path": "jsmaf.onEnterBackground",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Container",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Container.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Container.prototype.toString",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.toLocaleString",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.valueOf",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.hasOwnProperty",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.propertyIsEnumerable",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.isPrototypeOf",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.__defineGetter__",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.__defineSetter__",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.__lookupGetter__",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.__lookupSetter__",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Container.prototype.__proto__",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Container.prototype.constructor",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.Image",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Image.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Image.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Mesh",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Mesh.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Mesh.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Slate",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Slate.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Slate.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Text",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Text.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Text.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Style",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Style.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Style.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Video",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Video.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Video.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.WebSocket",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocket.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocket.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.WebSocketServer",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocketServer.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocketServer.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.User",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.User.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.User.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.XMLHttpRequest",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.XMLHttpRequest.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.XMLHttpRequest.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.AudioClip",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.AudioClip.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.AudioClip.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Preload",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Preload.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Preload.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.__proto__.forceConnect",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.showOSK",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.argv",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.clearTimeout",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.exit",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.processTime",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.gc",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.setTimeout",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.forceShutdown",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.print",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.include",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.hideSplashScreen",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.alert",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.openWebBrowser",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.speak",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.eval",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.setInterval",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.showCCSettings",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.clearInterval",
+    "type": "function"
+  },
+  {
+    "path": "jsmaf.__proto__.showOSK2",
+    "type": "function"
+  }
+]
