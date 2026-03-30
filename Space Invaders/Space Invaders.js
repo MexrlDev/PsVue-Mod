@@ -2,6 +2,9 @@
 
 // Author: MexrlDev 2026
 
+// Vue Space Invaders - Enhanced with Persistent Score on Win & Respawn Flashing
+// Author: MexrlDev
+
 (function () {
   // ---------------- Configuration ----------------
   var SCREEN_W = 1920, SCREEN_H = 1080;
@@ -87,6 +90,12 @@
   var hardModeBonusSpeed = 0;  // each win adds +2 to alien bullet speed
   var WIN_WAVE_THRESHOLD = 10;
 
+  // Invincibility and respawn
+  var invincibleTimer = 0;      // frames left of invincibility
+  var INVINCIBLE_DURATION = 90; // 1.5 seconds at 60fps
+  var respawnFlashingTimer = 0; // frames left of flashing effect
+  var cannonVisible = true;      // for flashing effect
+
   // Layers
   var layerOrder = ['background', 'aliens', 'powerups', 'player_bullets', 'alien_bullets', 'cannon', 'shield', 'ui'];
 
@@ -133,6 +142,7 @@
   var startText, gameOverText, pausedText, winText;
   var logoImg;
   var shieldImg;
+  var cannonImg;
 
   // Audio
   var shootAudio, explodeAudio, powerupAudio;
@@ -427,8 +437,26 @@
     }
   }
 
-  // ---------------- Reset Game (preserves hardModeBonusSpeed) ----------------
-  function resetGame() {
+  // ---------------- Respawn (with flashing) ----------------
+  function respawnPlayer() {
+    // Set invincibility
+    invincibleTimer = INVINCIBLE_DURATION;
+    // Start flashing effect
+    respawnFlashingTimer = INVINCIBLE_DURATION; // flash for entire invincibility
+    // Reset cannon position
+    cannon.x = (SCREEN_W - CANNON_WIDTH) / 2;
+    cannon.y = GAME_BOTTOM;
+    if (cannonImg) {
+      cannonImg.x = cannon.x;
+      cannonImg.y = cannon.y;
+    }
+    // Ensure cannon is visible initially
+    cannonVisible = true;
+    if (cannonImg) cannonImg.visible = true;
+  }
+
+  // ---------------- Reset Game (full reset, used for game over) ----------------
+  function fullResetGame() {
     lives = 3;
     score = 0;
     wave = 1;
@@ -438,6 +466,9 @@
     activePowerups.shield = 0;
     fireCooldown = 0;
     laserFireCounter = 0;
+    invincibleTimer = 0;
+    respawnFlashingTimer = 0;
+    cannonVisible = true;
 
     for (var i = activePlayerBullets.length - 1; i >= 0; i--) releasePlayerBullet(activePlayerBullets[i]);
     for (var j = activeAlienBullets.length - 1; j >= 0; j--) releaseAlienBullet(activeAlienBullets[j]);
@@ -455,6 +486,42 @@
     if (winText) winText.visible = false;
     if (pausedText) pausedText.visible = false;
     if (shieldImg) shieldImg.visible = false;
+    if (cannonImg) cannonImg.visible = true;
+    updateUI();
+  }
+
+  // ---------------- Win Restart (preserves score, only resets lives & wave) ----------------
+  function winRestartGame() {
+    // Preserve score, reset lives to 3, wave to 1, clear powerups, etc.
+    lives = 3;
+    wave = 1;
+    activePowerups.spread.timer = 0;
+    activePowerups.spread.level = 0;
+    activePowerups.laser = 0;
+    activePowerups.shield = 0;
+    fireCooldown = 0;
+    laserFireCounter = 0;
+    invincibleTimer = 0;
+    respawnFlashingTimer = 0;
+    cannonVisible = true;
+
+    for (var i = activePlayerBullets.length - 1; i >= 0; i--) releasePlayerBullet(activePlayerBullets[i]);
+    for (var j = activeAlienBullets.length - 1; j >= 0; j--) releaseAlienBullet(activeAlienBullets[j]);
+    for (var k = activePowerupsList.length - 1; k >= 0; k--) releasePowerup(activePowerupsList[k]);
+
+    spawnWave();
+
+    cannon.x = (SCREEN_W - CANNON_WIDTH) / 2;
+    cannon.y = GAME_BOTTOM;
+
+    gameState = STATE_PLAYING;
+    if (logoImg) logoImg.visible = false;
+    if (startText) startText.visible = false;
+    if (gameOverText) gameOverText.visible = false;
+    if (winText) winText.visible = false;
+    if (pausedText) pausedText.visible = false;
+    if (shieldImg) shieldImg.visible = false;
+    if (cannonImg) cannonImg.visible = true;
     updateUI();
   }
 
@@ -503,9 +570,9 @@
 
     cannon.x = (SCREEN_W - CANNON_WIDTH) / 2;
     cannon.y = GAME_BOTTOM;
-    if (layers.cannon[0]) {
-      layers.cannon[0].x = cannon.x;
-      layers.cannon[0].y = cannon.y;
+    if (cannonImg) {
+      cannonImg.x = cannon.x;
+      cannonImg.y = cannon.y;
     }
 
     // After completing wave 10 (wave becomes 11), trigger win
@@ -573,6 +640,31 @@
   function updateGame() {
     if (gameState !== STATE_PLAYING || paused) return;
 
+    // Handle invincibility and flashing
+    if (invincibleTimer > 0) {
+      invincibleTimer--;
+      // Flashing effect: toggle visibility every 4 frames
+      if (respawnFlashingTimer > 0) {
+        respawnFlashingTimer--;
+        if (respawnFlashingTimer % 4 === 0) {
+          cannonVisible = !cannonVisible;
+          if (cannonImg) cannonImg.visible = cannonVisible;
+        }
+      } else {
+        // Ensure cannon is visible when flashing ends
+        if (!cannonVisible) {
+          cannonVisible = true;
+          if (cannonImg) cannonImg.visible = true;
+        }
+      }
+    } else {
+      // Ensure cannon is visible when not invincible
+      if (cannonImg && !cannonImg.visible) {
+        cannonImg.visible = true;
+        cannonVisible = true;
+      }
+    }
+
     // Decrement power‑up timers
     if (activePowerups.spread.timer > 0) {
       activePowerups.spread.timer--;
@@ -601,6 +693,7 @@
       }
     }
 
+    // Cannon movement (only if not respawning flashing? but allow movement anyway)
     if (pressedKeys[7]) {
       cannon.x = Math.max(GAME_LEFT, cannon.x - CANNON_SPEED);
     }
@@ -613,9 +706,9 @@
     if (pressedKeys[6]) {
       cannon.y = Math.min(GAME_BOTTOM, cannon.y + CANNON_SPEED);
     }
-    if (layers.cannon[0]) {
-      layers.cannon[0].x = cannon.x;
-      layers.cannon[0].y = cannon.y;
+    if (cannonImg) {
+      cannonImg.x = cannon.x;
+      cannonImg.y = cannon.y;
     }
 
     // Scroll background
@@ -646,13 +739,23 @@
       a.img.y = a.y;
     }
 
+    // Player-alien collision
     var cannonRect = { x: cannon.x, y: cannon.y, w: CANNON_WIDTH, h: CANNON_HEIGHT };
     for (var i = 0; i < activeAliens.length; i++) {
       var a = activeAliens[i];
       var alienRect = { x: a.x, y: a.y, w: ALIEN_WIDTH, h: ALIEN_HEIGHT };
       if (rectCollide(cannonRect, alienRect)) {
-        gameOver();
-        return;
+        if (invincibleTimer <= 0 && activePowerups.shield <= 0) {
+          // Lose a life and respawn
+          lives--;
+          if (lives <= 0) {
+            gameOver();
+            return;
+          }
+          respawnPlayer();
+          // Immediately break to avoid multiple collisions in same frame
+          break;
+        }
       }
     }
 
@@ -712,7 +815,8 @@
         continue;
       }
 
-      if (activePowerups.shield <= 0) {
+      // Only apply bullet damage if not invincible and shield not active
+      if (invincibleTimer <= 0 && activePowerups.shield <= 0) {
         var bulletRect = { x: b.x, y: b.y, w: BULLET_WIDTH, h: BULLET_HEIGHT };
         var cannonRect = { x: cannon.x, y: cannon.y, w: CANNON_WIDTH, h: CANNON_HEIGHT };
         if (rectCollide(bulletRect, cannonRect)) {
@@ -722,6 +826,7 @@
             gameOver();
             return;
           }
+          respawnPlayer();
           if (explodeAudio) try { explodeAudio.play(false); } catch (e) {}
           continue;
         }
@@ -768,13 +873,14 @@
     }
     else if (keyCode === 14) {
       if (gameState === STATE_START || gameState === STATE_GAMEOVER) {
-        // Normal restart: reset hardModeBonusSpeed to 0
+        // Normal restart: reset everything including score
         hardModeBonusSpeed = 0;
-        resetGame();
+        fullResetGame();
       }
       else if (gameState === STATE_WIN) {
+        // Win restart: preserve score, increase difficulty
         hardModeBonusSpeed += 2;
-        resetGame();
+        winRestartGame();
       }
       else if (gameState === STATE_PLAYING && !paused) {
         if (activePowerups.laser <= 0) {
@@ -812,7 +918,7 @@
     layers.background.push(bg1, bg2);
 
     // Cannon
-    var cannonImg = new Image({
+    cannonImg = new Image({
       url: ASSET_PATH + 'cannon.png',
       x: cannon.x, y: cannon.y,
       width: CANNON_WIDTH, height: CANNON_HEIGHT
@@ -828,7 +934,7 @@
     });
     layers.shield.push(shieldImg);
 
-    // Pools (larger to prevent starvation)
+    // Pools
     createAlienPool(MAX_ROWS * MAX_COLS + 20);
     createPlayerBulletPool(100);
     createAlienBulletPool(100);
@@ -880,7 +986,7 @@
     for (var n in layers) if (layers.hasOwnProperty(n)) layers[n].length = 0;
   }
 
-  var GLOBAL_KEY = '__invadersFinal_v4';
+  var GLOBAL_KEY = '__invadersFinal_v6';
   var prev = (typeof window !== 'undefined' && window[GLOBAL_KEY]) || null;
   if (prev && typeof prev.cleanup === 'function') { try { prev.cleanup(); } catch (e) {} }
   var instance = { cleanup: cleanup };
@@ -890,6 +996,6 @@
   loadSave(function () {
     buildUI();
     frameInterval = jsmaf.setInterval(gameLoop, 16);
-    log('Space Invaders loded.');
+    log('Space Invaders.');
   });
 })();
