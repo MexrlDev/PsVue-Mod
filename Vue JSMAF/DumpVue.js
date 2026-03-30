@@ -1,6 +1,6 @@
 // Dump all jsmaf for all vue version
 
-// Mow has auto testing dor you! so youll have it in your jsmaf already haha
+// Now has auto testing for you! so youll have it in your jsmaf already haha
 
 // By mexrldev 2026
 
