@@ -1,39 +1,48 @@
 [
   {
     "path": "jsmaf.externalParameter",
-    "type": "string"
+    "type": "string",
+    "value": ""
   },
   {
     "path": "jsmaf.screenAspect",
-    "type": "number"
+    "type": "number",
+    "value": 1.7777777777777777
   },
   {
     "path": "jsmaf.onKeyboardDown",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.hardwareId",
-    "type": "string"
+    "type": "string",
+    "value": "haha"
   },
   {
     "path": "jsmaf.onEnterFrame",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onshutdown",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.argc",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.frameRate",
-    "type": "number"
+    "type": "number",
+    "value": 60
   },
   {
     "path": "jsmaf.onenterforeground",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.connectionInfo",
@@ -41,163 +50,209 @@
   },
   {
     "path": "jsmaf.connectionInfo.type",
-    "type": "string"
+    "type": "string",
+    "value": "wireless"
   },
   {
     "path": "jsmaf.connectionInfo.wifi_ssid",
-    "type": "string"
+    "type": "string",
+    "value": "nope"
   },
   {
     "path": "jsmaf.connectionInfo.wifi_signal",
-    "type": "number"
+    "type": "number",
+    "value": -22
   },
   {
     "path": "jsmaf.connectionInfo.wifi_encryption",
-    "type": "string"
+    "type": "string",
+    "value": "WPA2SK_AES"
   },
   {
     "path": "jsmaf.onKeyUp",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onError",
-    "type": "function"
+    "type": "function",
+    "name": "",
+    "arity": 1
   },
   {
     "path": "jsmaf.onkeyboarddown",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.depthTest",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.onShutdown",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.screenWidth",
-    "type": "number"
+    "type": "number",
+    "value": 1920
   },
   {
     "path": "jsmaf.isTTSenabled",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.onkeyrepeat",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.screenHeight",
-    "type": "number"
+    "type": "number",
+    "value": 1080
   },
   {
     "path": "jsmaf.onkeydown",
-    "type": "function"
+    "type": "function",
+    "name": "",
+    "arity": 1
   },
   {
     "path": "jsmaf.onKeyboardRepeat",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onkeyup",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onKeyboardUp",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onenterframe",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.platform",
-    "type": "string"
+    "type": "string",
+    "value": "ps4"
   },
   {
     "path": "jsmaf.onEnterForeground",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.version",
-    "type": "string"
+    "type": "string",
+    "value": "2.22.2"
   },
   {
     "path": "jsmaf.ontextspeech",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.circleIsAdvanceButton",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.gamma",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.onexternalparamchange",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onKeyDown",
-    "type": "function"
+    "type": "function",
+    "name": "",
+    "arity": 1
   },
   {
     "path": "jsmaf.cookie",
-    "type": "string"
+    "type": "string",
+    "value": ""
   },
   {
     "path": "jsmaf.onKeyRepeat",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.networkStatus",
-    "type": "string"
+    "type": "string",
+    "value": "connected"
   },
   {
     "path": "jsmaf.fwDebugString",
-    "type": "string"
+    "type": "string",
+    "value": "release/2.22-9d1bedf"
   },
   {
     "path": "jsmaf.onenterbackground",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.remotePlay",
-    "type": "boolean"
+    "type": "boolean",
+    "value": true
   },
   {
     "path": "jsmaf.onerror",
-    "type": "function"
+    "type": "function",
+    "name": "",
+    "arity": 1
   },
   {
     "path": "jsmaf.onTextSpeech",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onNetworkStatusChange",
-    "type": "function"
+    "type": "function",
+    "name": "",
+    "arity": 1
   },
   {
     "path": "jsmaf.locale",
-    "type": "string"
+    "type": "string",
+    "value": "en"
   },
   {
     "path": "jsmaf.onExternalParamChange",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onkeyboardup",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onkeyboardrepeat",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.onnetworkstatuschange",
-    "type": "function"
+    "type": "function",
+    "name": "",
+    "arity": 1
   },
   {
     "path": "jsmaf.root",
@@ -205,31 +260,38 @@
   },
   {
     "path": "jsmaf.root.scaleZ",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.width",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.rotateZ",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.clipX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.clipHeight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.y",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.clip",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children",
@@ -241,23 +303,28 @@
   },
   {
     "path": "jsmaf.root.children.0.width",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.y",
-    "type": "number"
+    "type": "number",
+    "value": 510
   },
   {
     "path": "jsmaf.root.children.0.clipHeight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.style",
-    "type": "string"
+    "type": "string",
+    "value": "white"
   },
   {
     "path": "jsmaf.root.children.0.clip",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children.0.children",
@@ -265,259 +332,353 @@
   },
   {
     "path": "jsmaf.root.children.0.children.length",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.length",
-    "type": "number"
+    "path": "jsmaf.root.children.0.children.__proto__.length",
+    "type": "number",
+    "value": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.values",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.values",
+    "type": "function",
+    "name": "values",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.toString",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.toString",
+    "type": "function",
+    "name": "toString",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.toLocaleString",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.toLocaleString",
+    "type": "function",
+    "name": "toLocaleString",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.concat",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.concat",
+    "type": "function",
+    "name": "concat",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.fill",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.fill",
+    "type": "function",
+    "name": "fill",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.join",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.join",
+    "type": "function",
+    "name": "join",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.pop",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.pop",
+    "type": "function",
+    "name": "pop",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.push",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.push",
+    "type": "function",
+    "name": "push",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.reverse",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.reverse",
+    "type": "function",
+    "name": "reverse",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.shift",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.shift",
+    "type": "function",
+    "name": "shift",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.slice",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.slice",
+    "type": "function",
+    "name": "slice",
+    "arity": 2
   },
   {
-    "path": "jsmaf.root.children.0.children.sort",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.sort",
+    "type": "function",
+    "name": "sort",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.splice",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.splice",
+    "type": "function",
+    "name": "splice",
+    "arity": 2
   },
   {
-    "path": "jsmaf.root.children.0.children.unshift",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.unshift",
+    "type": "function",
+    "name": "unshift",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.every",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.every",
+    "type": "function",
+    "name": "every",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.forEach",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.forEach",
+    "type": "function",
+    "name": "forEach",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.some",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.some",
+    "type": "function",
+    "name": "some",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.indexOf",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.indexOf",
+    "type": "function",
+    "name": "indexOf",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.lastIndexOf",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.lastIndexOf",
+    "type": "function",
+    "name": "lastIndexOf",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.filter",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.filter",
+    "type": "function",
+    "name": "filter",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.reduce",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.reduce",
+    "type": "function",
+    "name": "reduce",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.reduceRight",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.reduceRight",
+    "type": "function",
+    "name": "reduceRight",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.map",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.map",
+    "type": "function",
+    "name": "map",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.entries",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.entries",
+    "type": "function",
+    "name": "entries",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.keys",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.keys",
+    "type": "function",
+    "name": "keys",
+    "arity": 0
   },
   {
-    "path": "jsmaf.root.children.0.children.find",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.find",
+    "type": "function",
+    "name": "find",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.findIndex",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.findIndex",
+    "type": "function",
+    "name": "findIndex",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.includes",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.includes",
+    "type": "function",
+    "name": "includes",
+    "arity": 1
   },
   {
-    "path": "jsmaf.root.children.0.children.copyWithin",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.copyWithin",
+    "type": "function",
+    "name": "copyWithin",
+    "arity": 2
   },
   {
-    "path": "jsmaf.root.children.0.children.constructor",
-    "type": "function"
+    "path": "jsmaf.root.children.0.children.__proto__.constructor",
+    "type": "function",
+    "name": "Array",
+    "arity": 1
   },
   {
     "path": "jsmaf.root.children.0.clipY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.text",
-    "type": "string"
+    "type": "string",
+    "value": "Press X (⨉) to dump jsmaf"
   },
   {
     "path": "jsmaf.root.children.0.borderImage",
-    "type": "string"
+    "type": "string",
+    "value": ""
   },
   {
     "path": "jsmaf.root.children.0.borderWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.borderColor",
-    "type": "string"
+    "type": "string",
+    "value": "rgb(0,0,0)"
   },
   {
     "path": "jsmaf.root.children.0.z",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.baseline",
-    "type": "number"
+    "type": "number",
+    "value": 20
   },
   {
     "path": "jsmaf.root.children.0.rotateY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.scaleY",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.0.clipWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.naturalHeight",
-    "type": "number"
+    "type": "number",
+    "value": 33
   },
   {
     "path": "jsmaf.root.children.0.rotateX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.scaleX",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.0.align",
-    "type": "string"
+    "type": "string",
+    "value": "left"
   },
   {
     "path": "jsmaf.root.children.0.lineCount",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.0.scaleZ",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.0.tint",
-    "type": "string"
+    "type": "string",
+    "value": "rgb(255,255,255)"
   },
   {
     "path": "jsmaf.root.children.0.rotateZ",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.clipX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.paddingBottom",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.alpha",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.0.x",
-    "type": "number"
+    "type": "number",
+    "value": 780
   },
   {
     "path": "jsmaf.root.children.0.naturalWidth",
-    "type": "number"
+    "type": "number",
+    "value": 273
   },
   {
     "path": "jsmaf.root.children.0.paddingRight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.background",
-    "type": "string"
+    "type": "string",
+    "value": "rgba(255,255,255,0.000000)"
   },
   {
     "path": "jsmaf.root.children.0.visible",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children.0.lineClamp",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.height",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.onload",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.root.children.0.paddingLeft",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.0.onLoad",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.root.children.0.paddingTop",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1",
@@ -525,23 +686,28 @@
   },
   {
     "path": "jsmaf.root.children.1.width",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.y",
-    "type": "number"
+    "type": "number",
+    "value": 570
   },
   {
     "path": "jsmaf.root.children.1.clipHeight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.style",
-    "type": "string"
+    "type": "string",
+    "value": "white"
   },
   {
     "path": "jsmaf.root.children.1.clip",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children.1.children",
@@ -549,135 +715,176 @@
   },
   {
     "path": "jsmaf.root.children.1.children.length",
-    "type": "number"
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.children.__proto__",
+    "type": "circular"
   },
   {
     "path": "jsmaf.root.children.1.clipY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.text",
-    "type": "string"
+    "type": "string",
+    "value": "Press O (O) to reload debugging"
   },
   {
     "path": "jsmaf.root.children.1.borderImage",
-    "type": "string"
+    "type": "string",
+    "value": ""
   },
   {
     "path": "jsmaf.root.children.1.borderWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.borderColor",
-    "type": "string"
+    "type": "string",
+    "value": "rgb(0,0,0)"
   },
   {
     "path": "jsmaf.root.children.1.z",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.baseline",
-    "type": "number"
+    "type": "number",
+    "value": 20
   },
   {
     "path": "jsmaf.root.children.1.rotateY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.scaleY",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.1.clipWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.naturalHeight",
-    "type": "number"
+    "type": "number",
+    "value": 33
   },
   {
     "path": "jsmaf.root.children.1.rotateX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.scaleX",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.1.align",
-    "type": "string"
+    "type": "string",
+    "value": "left"
   },
   {
     "path": "jsmaf.root.children.1.lineCount",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.1.scaleZ",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.1.tint",
-    "type": "string"
+    "type": "string",
+    "value": "rgb(255,255,255)"
   },
   {
     "path": "jsmaf.root.children.1.rotateZ",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.clipX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.paddingBottom",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.alpha",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.1.x",
-    "type": "number"
+    "type": "number",
+    "value": 780
   },
   {
     "path": "jsmaf.root.children.1.naturalWidth",
-    "type": "number"
+    "type": "number",
+    "value": 354
   },
   {
     "path": "jsmaf.root.children.1.paddingRight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.background",
-    "type": "string"
+    "type": "string",
+    "value": "rgba(255,255,255,0.000000)"
   },
   {
     "path": "jsmaf.root.children.1.visible",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children.1.lineClamp",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.height",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.onload",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.root.children.1.paddingLeft",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.1.onLoad",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.root.children.1.paddingTop",
-    "type": "number"
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.__proto__",
+    "type": "circular"
   },
   {
     "path": "jsmaf.root.children.2",
@@ -685,23 +892,28 @@
   },
   {
     "path": "jsmaf.root.children.2.width",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.y",
-    "type": "number"
+    "type": "number",
+    "value": 1040
   },
   {
     "path": "jsmaf.root.children.2.clipHeight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.style",
-    "type": "string"
+    "type": "string",
+    "value": "white"
   },
   {
     "path": "jsmaf.root.children.2.clip",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children.2.children",
@@ -709,187 +921,451 @@
   },
   {
     "path": "jsmaf.root.children.2.children.length",
-    "type": "number"
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.children.__proto__",
+    "type": "circular"
   },
   {
     "path": "jsmaf.root.children.2.clipY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.text",
-    "type": "string"
+    "type": "string",
+    "value": "Dump path: file://../download0/payloads/jsmaf_dump.json"
   },
   {
     "path": "jsmaf.root.children.2.borderImage",
-    "type": "string"
+    "type": "string",
+    "value": ""
   },
   {
     "path": "jsmaf.root.children.2.borderWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.borderColor",
-    "type": "string"
+    "type": "string",
+    "value": "rgb(0,0,0)"
   },
   {
     "path": "jsmaf.root.children.2.z",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.baseline",
-    "type": "number"
+    "type": "number",
+    "value": 20
   },
   {
     "path": "jsmaf.root.children.2.rotateY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.scaleY",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.2.clipWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.naturalHeight",
-    "type": "number"
+    "type": "number",
+    "value": 33
   },
   {
     "path": "jsmaf.root.children.2.rotateX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.scaleX",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.2.align",
-    "type": "string"
+    "type": "string",
+    "value": "left"
   },
   {
     "path": "jsmaf.root.children.2.lineCount",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.2.scaleZ",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.2.tint",
-    "type": "string"
+    "type": "string",
+    "value": "rgb(255,255,255)"
   },
   {
     "path": "jsmaf.root.children.2.rotateZ",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.clipX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.paddingBottom",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.alpha",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.children.2.x",
-    "type": "number"
+    "type": "number",
+    "value": 20
   },
   {
     "path": "jsmaf.root.children.2.naturalWidth",
-    "type": "number"
+    "type": "number",
+    "value": 615
   },
   {
     "path": "jsmaf.root.children.2.paddingRight",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.background",
-    "type": "string"
+    "type": "string",
+    "value": "rgba(255,255,255,0.000000)"
   },
   {
     "path": "jsmaf.root.children.2.visible",
-    "type": "boolean"
+    "type": "boolean",
+    "value": false
   },
   {
     "path": "jsmaf.root.children.2.lineClamp",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.height",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.onload",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.root.children.2.paddingLeft",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.children.2.onLoad",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.root.children.2.paddingTop",
-    "type": "number"
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.3",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.3.width",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.y",
+    "type": "number",
+    "value": 540
+  },
+  {
+    "path": "jsmaf.root.children.3.clipHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.style",
+    "type": "string",
+    "value": "yellow"
+  },
+  {
+    "path": "jsmaf.root.children.3.clip",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.3.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.3.children.length",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.children.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.3.clipY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.text",
+    "type": "string",
+    "value": "Dumping..."
+  },
+  {
+    "path": "jsmaf.root.children.3.borderImage",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "path": "jsmaf.root.children.3.borderWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.borderColor",
+    "type": "string",
+    "value": "rgb(0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.3.z",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.baseline",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.rotateY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.scaleY",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.clipWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.naturalHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.rotateX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.scaleX",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.align",
+    "type": "string",
+    "value": "left"
+  },
+  {
+    "path": "jsmaf.root.children.3.lineCount",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.scaleZ",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.tint",
+    "type": "string",
+    "value": "rgb(255,255,255)"
+  },
+  {
+    "path": "jsmaf.root.children.3.rotateZ",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.clipX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingBottom",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.alpha",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.x",
+    "type": "number",
+    "value": 20
+  },
+  {
+    "path": "jsmaf.root.children.3.naturalWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingRight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.background",
+    "type": "string",
+    "value": "rgba(255,255,255,0.000000)"
+  },
+  {
+    "path": "jsmaf.root.children.3.visible",
+    "type": "boolean",
+    "value": true
+  },
+  {
+    "path": "jsmaf.root.children.3.lineClamp",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.height",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.onload",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingLeft",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.onLoad",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingTop",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.__proto__",
+    "type": "circular"
   },
   {
     "path": "jsmaf.root.children.length",
-    "type": "number"
+    "type": "number",
+    "value": 4
+  },
+  {
+    "path": "jsmaf.root.children.__proto__",
+    "type": "circular"
   },
   {
     "path": "jsmaf.root.x",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.alpha",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.visible",
-    "type": "boolean"
+    "type": "boolean",
+    "value": true
   },
   {
     "path": "jsmaf.root.z",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.height",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.rotateY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.scaleX",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.scaleY",
-    "type": "number"
+    "type": "number",
+    "value": 1
   },
   {
     "path": "jsmaf.root.clipWidth",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.rotateX",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.root.clipY",
-    "type": "number"
+    "type": "number",
+    "value": 0
   },
   {
     "path": "jsmaf.onEnterBackground",
-    "type": "object"
+    "type": "null",
+    "value": null
   },
   {
     "path": "jsmaf.Container",
@@ -901,51 +1377,69 @@
   },
   {
     "path": "jsmaf.Container.prototype.toString",
-    "type": "function"
+    "type": "function",
+    "name": "toString",
+    "arity": 0
   },
   {
     "path": "jsmaf.Container.prototype.toLocaleString",
-    "type": "function"
+    "type": "function",
+    "name": "toLocaleString",
+    "arity": 0
   },
   {
     "path": "jsmaf.Container.prototype.valueOf",
-    "type": "function"
+    "type": "function",
+    "name": "valueOf",
+    "arity": 0
   },
   {
     "path": "jsmaf.Container.prototype.hasOwnProperty",
-    "type": "function"
+    "type": "function",
+    "name": "hasOwnProperty",
+    "arity": 1
   },
   {
     "path": "jsmaf.Container.prototype.propertyIsEnumerable",
-    "type": "function"
+    "type": "function",
+    "name": "propertyIsEnumerable",
+    "arity": 1
   },
   {
     "path": "jsmaf.Container.prototype.isPrototypeOf",
-    "type": "function"
+    "type": "function",
+    "name": "isPrototypeOf",
+    "arity": 1
   },
   {
     "path": "jsmaf.Container.prototype.__defineGetter__",
-    "type": "function"
+    "type": "function",
+    "name": "__defineGetter__",
+    "arity": 2
   },
   {
     "path": "jsmaf.Container.prototype.__defineSetter__",
-    "type": "function"
+    "type": "function",
+    "name": "__defineSetter__",
+    "arity": 2
   },
   {
     "path": "jsmaf.Container.prototype.__lookupGetter__",
-    "type": "function"
+    "type": "function",
+    "name": "__lookupGetter__",
+    "arity": 1
   },
   {
     "path": "jsmaf.Container.prototype.__lookupSetter__",
-    "type": "function"
-  },
-  {
-    "path": "jsmaf.Container.prototype",
-    "type": "object"
+    "type": "function",
+    "name": "__lookupSetter__",
+    "arity": 1
   },
   {
     "path": "jsmaf.Container.prototype.constructor",
-    "type": "function"
+    "type": "function",
+    "name": "Object",
+    "arity": 1
   },
   {
     "path": "jsmaf.Image",
@@ -1092,83 +1586,123 @@
     "type": "circular"
   },
   {
-    "path": "jsmaf.forceConnect",
-    "type": "function"
+    "path": "jsmaf.__proto__.forceConnect",
+    "type": "function",
+    "name": "forceConnect",
+    "arity": 0
   },
   {
-    "path": "jsmaf.showOSK",
-    "type": "function"
+    "path": "jsmaf.__proto__.showOSK",
+    "type": "function",
+    "name": "showOSK",
+    "arity": 0
   },
   {
-    "path": "jsmaf.argv",
-    "type": "function"
+    "path": "jsmaf.__proto__.argv",
+    "type": "function",
+    "name": "argv",
+    "arity": 0
   },
   {
-    "path": "jsmaf.clearTimeout",
-    "type": "function"
+    "path": "jsmaf.__proto__.clearTimeout",
+    "type": "function",
+    "name": "clearTimeout",
+    "arity": 0
   },
   {
-    "path": "jsmaf.exit",
-    "type": "function"
+    "path": "jsmaf.__proto__.exit",
+    "type": "function",
+    "name": "exit",
+    "arity": 0
   },
   {
-    "path": "jsmaf.processTime",
-    "type": "function"
+    "path": "jsmaf.__proto__.processTime",
+    "type": "function",
+    "name": "processTime",
+    "arity": 0
   },
   {
-    "path": "jsmaf.gc",
-    "type": "function"
+    "path": "jsmaf.__proto__.gc",
+    "type": "function",
+    "name": "gc",
+    "arity": 0
   },
   {
-    "path": "jsmaf.setTimeout",
-    "type": "function"
+    "path": "jsmaf.__proto__.setTimeout",
+    "type": "function",
+    "name": "setTimeout",
+    "arity": 0
   },
   {
-    "path": "jsmaf.forceShutdown",
-    "type": "function"
+    "path": "jsmaf.__proto__.forceShutdown",
+    "type": "function",
+    "name": "forceShutdown",
+    "arity": 0
   },
   {
-    "path": "jsmaf.print",
-    "type": "function"
+    "path": "jsmaf.__proto__.print",
+    "type": "function",
+    "name": "print",
+    "arity": 0
   },
   {
-    "path": "jsmaf.include",
-    "type": "function"
+    "path": "jsmaf.__proto__.include",
+    "type": "function",
+    "name": "include",
+    "arity": 0
   },
   {
-    "path": "jsmaf.hideSplashScreen",
-    "type": "function"
+    "path": "jsmaf.__proto__.hideSplashScreen",
+    "type": "function",
+    "name": "hideSplashScreen",
+    "arity": 0
   },
   {
-    "path": "jsmaf.alert",
-    "type": "function"
+    "path": "jsmaf.__proto__.alert",
+    "type": "function",
+    "name": "alert",
+    "arity": 0
   },
   {
-    "path": "jsmaf.openWebBrowser",
-    "type": "function"
+    "path": "jsmaf.__proto__.openWebBrowser",
+    "type": "function",
+    "name": "openWebBrowser",
+    "arity": 0
   },
   {
-    "path": "jsmaf.speak",
-    "type": "function"
+    "path": "jsmaf.__proto__.speak",
+    "type": "function",
+    "name": "speak",
+    "arity": 0
   },
   {
-    "path": "jsmaf.eval",
-    "type": "function"
+    "path": "jsmaf.__proto__.eval",
+    "type": "function",
+    "name": "eval",
+    "arity": 0
   },
   {
-    "path": "jsmaf.setInterval",
-    "type": "function"
+    "path": "jsmaf.__proto__.setInterval",
+    "type": "function",
+    "name": "setInterval",
+    "arity": 0
   },
   {
-    "path": "jsmaf.showCCSettings",
-    "type": "function"
+    "path": "jsmaf.__proto__.showCCSettings",
+    "type": "function",
+    "name": "showCCSettings",
+    "arity": 0
   },
   {
-    "path": "jsmaf.clearInterval",
-    "type": "function"
+    "path": "jsmaf.__proto__.clearInterval",
+    "type": "function",
+    "name": "clearInterval",
+    "arity": 0
   },
   {
-    "path": "jsmaf.showOSK2",
-    "type": "function"
+    "path": "jsmaf.__proto__.showOSK2",
+    "type": "function",
+    "name": "showOSK2",
+    "arity": 0
   }
 ]
