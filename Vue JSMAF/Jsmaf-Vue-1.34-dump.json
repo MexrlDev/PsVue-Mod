@@ -268,127 +268,127 @@
     "type": "number"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.length",
+    "path": "jsmaf.root.children.0.children.length",
     "type": "number"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.values",
+    "path": "jsmaf.root.children.0.children.values",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.toString",
+    "path": "jsmaf.root.children.0.children.toString",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.toLocaleString",
+    "path": "jsmaf.root.children.0.children.toLocaleString",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.concat",
+    "path": "jsmaf.root.children.0.children.concat",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.fill",
+    "path": "jsmaf.root.children.0.children.fill",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.join",
+    "path": "jsmaf.root.children.0.children.join",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.pop",
+    "path": "jsmaf.root.children.0.children.pop",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.push",
+    "path": "jsmaf.root.children.0.children.push",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.reverse",
+    "path": "jsmaf.root.children.0.children.reverse",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.shift",
+    "path": "jsmaf.root.children.0.children.shift",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.slice",
+    "path": "jsmaf.root.children.0.children.slice",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.sort",
+    "path": "jsmaf.root.children.0.children.sort",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.splice",
+    "path": "jsmaf.root.children.0.children.splice",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.unshift",
+    "path": "jsmaf.root.children.0.children.unshift",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.every",
+    "path": "jsmaf.root.children.0.children.every",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.forEach",
+    "path": "jsmaf.root.children.0.children.forEach",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.some",
+    "path": "jsmaf.root.children.0.children.some",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.indexOf",
+    "path": "jsmaf.root.children.0.children.indexOf",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.lastIndexOf",
+    "path": "jsmaf.root.children.0.children.lastIndexOf",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.filter",
+    "path": "jsmaf.root.children.0.children.filter",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.reduce",
+    "path": "jsmaf.root.children.0.children.reduce",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.reduceRight",
+    "path": "jsmaf.root.children.0.children.reduceRight",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.map",
+    "path": "jsmaf.root.children.0.children.map",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.entries",
+    "path": "jsmaf.root.children.0.children.entries",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.keys",
+    "path": "jsmaf.root.children.0.children.keys",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.find",
+    "path": "jsmaf.root.children.0.children.find",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.findIndex",
+    "path": "jsmaf.root.children.0.children.findIndex",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.includes",
+    "path": "jsmaf.root.children.0.children.includes",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.copyWithin",
+    "path": "jsmaf.root.children.0.children.copyWithin",
     "type": "function"
   },
   {
-    "path": "jsmaf.root.children.0.children.__proto__.constructor",
+    "path": "jsmaf.root.children.0.children.constructor",
     "type": "function"
   },
   {
@@ -940,7 +940,7 @@
     "type": "function"
   },
   {
-    "path": "jsmaf.Container.prototype.__proto__",
+    "path": "jsmaf.Container.prototype",
     "type": "object"
   },
   {
@@ -1092,83 +1092,83 @@
     "type": "circular"
   },
   {
-    "path": "jsmaf.__proto__.forceConnect",
+    "path": "jsmaf.forceConnect",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.showOSK",
+    "path": "jsmaf.showOSK",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.argv",
+    "path": "jsmaf.argv",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.clearTimeout",
+    "path": "jsmaf.clearTimeout",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.exit",
+    "path": "jsmaf.exit",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.processTime",
+    "path": "jsmaf.processTime",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.gc",
+    "path": "jsmaf.gc",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.setTimeout",
+    "path": "jsmaf.setTimeout",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.forceShutdown",
+    "path": "jsmaf.forceShutdown",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.print",
+    "path": "jsmaf.print",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.include",
+    "path": "jsmaf.include",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.hideSplashScreen",
+    "path": "jsmaf.hideSplashScreen",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.alert",
+    "path": "jsmaf.alert",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.openWebBrowser",
+    "path": "jsmaf.openWebBrowser",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.speak",
+    "path": "jsmaf.speak",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.eval",
+    "path": "jsmaf.eval",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.setInterval",
+    "path": "jsmaf.setInterval",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.showCCSettings",
+    "path": "jsmaf.showCCSettings",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.clearInterval",
+    "path": "jsmaf.clearInterval",
     "type": "function"
   },
   {
-    "path": "jsmaf.__proto__.showOSK2",
+    "path": "jsmaf.showOSK2",
     "type": "function"
   }
 ]
