@@ -1,304 +1,233 @@
-// Sample 8, Vue (VID) Player v1.2 (alpha)
-
 // Original code that only has 1 stream on loop by Earthonion
 
 // Modified to work with multi url and coding by MexrlDev, 
 
 // bugs and issues Researching by StandVideo - Alienaareps4
 
+// Sample 8 (v1.2) Test build -LITE
+
 (function () {
-
-  // == (1) OPTIONAL BGM MUTE / CLEANUP ==
-  
-  if (typeof stopBgm === 'function') {
-    try { stopBgm(); } catch (e) {}
-  }
-
-  if (typeof startBgmIfEnabled !== 'undefined') {
-    startBgmIfEnabled = function () {};
-  }
-
+  // --- Cleanup any existing BGM (from your original scripts) ---
+  if (typeof stopBgm === 'function') { try { stopBgm(); } catch (e) {} }
+  if (typeof startBgmIfEnabled !== 'undefined') { startBgmIfEnabled = function () {}; }
   if (typeof bgmClip !== 'undefined' && bgmClip) {
     try {
       if (typeof bgmClip.stop === 'function') bgmClip.stop();
-    } catch (e1) {}
-    try {
       if (typeof bgmClip.close === 'function') bgmClip.close();
-    } catch (e2) {}
-    try {
-      if (typeof bgmClip.mute === 'function') bgmClip.mute(true);
-    } catch (e3) {}
-    try {
       bgmClip.muted = true;
       bgmClip.volume = 0;
-    } catch (e4) {}
+    } catch (e) {}
     bgmClip = null;
   }
 
+  // ========== (1) EDITABLE CONFIGURATION ==========
 
-  // == (2) EDIT HERE: STREAM LIST ==
-  
+  // --- Your video streams (add as many as you like) ---
   var STREAMS = [
-    "http://content.jwplatform.com/manifests/yp34SRmf.m3u8"
-    "http://earthonion.com/download0/stream.m3u8",
+    "http://content.jwplatform.com/manifests/yp34SRmf.m3u8",
+    "http://earthonion.com/download0/stream.m3u8"
+    // Add more URLs below – remember to put a comma after the previous line
   ];
 
+  // --- Splash images (optional) – set to [] to disable splash ---
+  var SPLASH_IMAGES = [
+  // Add here
+  ];
 
-  // == (3) EDIT HERE: PLAYBACK TUNING ==
- 
+  // --- Splash timing (milliseconds) – only used if there are images ---
+  var SPLASH_FADE_IN = 500;
+  var SPLASH_HOLD    = 1000;
+  var SPLASH_FADE_OUT = 500;
+
+  // --- Player tuning (optimal for both live and VOD) ---
   var CONFIG = {
-    // How long we tolerate startup, buffering, or temporary silence before recovery
-    startupGraceMs: 45000,
-    playingStallMs: 90000,
-    bufferingStallMs: 120000,
-
-    // How often the watchdog checks the player
-    watchdogIntervalMs: 5000,
-
-    // Retry behavior on the same stream
-    baseRetryDelayMs: 4000,
-    maxSameUrlRetries: 6,
-
-    // Cooldown to avoid repeated rapid reopen loops
-    refreshGuardMs: 4000,
-
-    // Buffer profile for higher quality streams
-    bufferTime: 90,
-    bufferMemory: 64,
-    bufferSize: 64,
-    bufferAhead: 90,
-    minBufferTime: 8,
-    maxBufferTime: 90,
-    startBufferTime: 5
+    // Memory & buffer management (prevents leaks and over‑downloading)
+    backBufferLength: 30,          // Keeps only 30 sec of watched video
+    liveBackBufferLength: 30,
+    liveSyncDuration: 10,          // Stays 10 sec behind live edge (reduces manifest parsing)
+    liveMaxLatency: 20,
+    maxBufferLength: 30,           // Limits forward buffer
+    maxMaxBufferLength: 30,
+    maxBufferHole: 1.5,            // Skip glitches up to 1.5 sec
+    nudgeOffset: 0.05,
+    nudgeMaxRetry: 4,
+    highBufferWatchdogPeriod: 3,
+    startFragPrefetch: true,
+    startupGraceMs: 60000,         // 60 sec to start playing
+    playingStallMs: 180000,        // 3 min without progress while playing
+    bufferingStallMs: 240000,      // 4 min stuck in buffering
+    watchdogIntervalMs: 8000,      // Check every 8 sec
+    baseRetryDelayMs: 2000,
+    maxSameUrlRetries: 999,        // How many times to retry the same stream before giving up
+    refreshGuardMs: 8000,
+    debug: false                   // Set to true to show console logs
   };
 
-  // == (4) STATE ==
-
-  var index = 0;
+  // ========== (2) INTERNAL GLOBALS – DO NOT EDIT ==========
+  var currentIndex = 0;
   var video = null;
-
   var autoMode = false;
   var loopMode = false;
-
-  var overlay = null;
-  var overlayTimers = [];
-
   var switching = false;
-  var retryTimer = null;
-  var watchdogTimer = null;
-  var startupTimer = null;
+  var splashActive = false;
+  var splashSkipped = false;
+  var watchdogTimer = null, startupTimer = null, retryTimer = null, refreshGuardUntil = 0;
+  var sameUrlFailures = 0, lastCurrentTime = 0, lastProgressAt = 0;
+  var fadeText = null, fadeTimeouts = [];
+  var splashImage = null, splashStep = 0;
+  var splashFadeInId = null, splashHoldId = null, splashFadeOutId = null;
+  var networkConnected = true;
 
-  var sameUrlFailures = 0;
-  var connected = true;
-
-  var lastCurrentTime = 0;
-  var lastProgressAt = 0;
-  var refreshGuardUntil = 0;
-
-  // == (5) SMALL HELPERS
-
-  function now() {
-    return Date.now ? Date.now() : new Date().getTime();
+  if (STREAMS.length > 1) {
+    autoMode = true;   // Rotate through the list
+    loopMode = false;
+  } else {
+    autoMode = false;
+    loopMode = true;
   }
 
-  function currentUrl() {
-    return STREAMS[index];
-  }
+  // ========== (3) HELPER FUNCTIONS ==========
+  function now() { return Date.now ? Date.now() : new Date().getTime(); }
+  function currentUrl() { return STREAMS[currentIndex]; }
 
   function clearTimers(list) {
     for (var i = 0; i < list.length; i++) {
-      try { clearTimeout(list[i]); } catch (e1) {}
-      try { clearInterval(list[i]); } catch (e2) {}
+      try { clearTimeout(list[i]); } catch(e) {}
+      try { clearInterval(list[i]); } catch(e) {}
     }
     list.length = 0;
   }
 
-  function safeSet(obj, key, value) {
-    try {
-      obj[key] = value;
-      return true;
-    } catch (e) {
-      return false;
-    }
+  function cancelAllTimers() {
+    if (watchdogTimer) { clearInterval(watchdogTimer); watchdogTimer = null; }
+    if (startupTimer) { clearTimeout(startupTimer); startupTimer = null; }
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (splashFadeInId) { clearInterval(splashFadeInId); splashFadeInId = null; }
+    if (splashHoldId) { clearTimeout(splashHoldId); splashHoldId = null; }
+    if (splashFadeOutId) { clearInterval(splashFadeOutId); splashFadeOutId = null; }
+    clearTimers(fadeTimeouts);
   }
 
   function removeFromRoot(obj) {
     if (!obj || !jsmaf || !jsmaf.root || !jsmaf.root.children) return;
-    try {
-      var pos = jsmaf.root.children.indexOf(obj);
-      if (pos !== -1) jsmaf.root.children.splice(pos, 1);
-    } catch (e) {}
+    var idx = jsmaf.root.children.indexOf(obj);
+    if (idx !== -1) jsmaf.root.children.splice(idx, 1);
   }
 
   function closeVideo(obj) {
     if (!obj) return;
-    try { if (typeof obj.stop === 'function') obj.stop(); } catch (e1) {}
-    try { if (typeof obj.close === 'function') obj.close(); } catch (e2) {}
+    try { if (typeof obj.stop === 'function') obj.stop(); } catch(e) {}
+    try { if (typeof obj.close === 'function') obj.close(); } catch(e) {}
   }
 
-  function safePlay() {
-    if (!video) return;
-    try { video.play(); } catch (e) {}
-  }
-
-  function safeOpen(url) {
-    if (!video) return false;
-    try {
-      video.open(url);
-      return true;
-    } catch (e) {
-      return false;
+  function destroyVideo() {
+    stopWatchdog();
+    stopStartupTimer();
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (video) {
+      removeFromRoot(video);
+      closeVideo(video);
+      video = null;
     }
   }
 
-  function getBufferedAheadSeconds() {
-    try {
-      if (!video) return null;
+  function safePlay() { try { if (video) video.play(); } catch(e) {} }
+  function safeOpen(url) { try { if (video) video.open(url); } catch(e) {} }
 
-      if (typeof video.bufferedAhead === 'number') {
-        return Math.max(0, video.bufferedAhead);
-      }
-
-      if (video.buffered && typeof video.buffered.length === 'number' && typeof video.currentTime === 'number') {
-        var ct = video.currentTime || 0;
-        for (var i = 0; i < video.buffered.length; i++) {
-          var start = 0;
-          var end = 0;
-          try { start = video.buffered.start(i); } catch (e1) {}
-          try { end = video.buffered.end(i); } catch (e2) {}
-          if (ct >= start && ct <= end) {
-            return Math.max(0, end - ct);
-          }
-        }
-        return 0;
-      }
-    } catch (e) {}
-
-    return null;
-  }
-
-  // == (6) OVERLAY / STATUS TEXT ==
-
-  function ensureOverlay() {
-    if (overlay) return;
-
-    overlay = new Text({
-      x: 10,
-      y: 30,
-      text: "",
-      font: "20px Arial",
-      color: "#00FF00",
-      visible: true,
-      opacity: 0,
-      zIndex: 1000
+  // ========== (4) FADE MESSAGE (Overlay text) ==========
+  function ensureFadeText() {
+    if (fadeText) return;
+    fadeText = new Text({
+      x: 10, y: 30, text: "", font: "24px Arial", color: "#FFFFFF",
+      visible: true, opacity: 0, zIndex: 1000
     });
-
-    jsmaf.root.children.push(overlay);
+    jsmaf.root.children.push(fadeText);
   }
 
   function showMessage(msg, isError) {
-    ensureOverlay();
-    clearTimers(overlayTimers);
+    ensureFadeText();
+    clearTimers(fadeTimeouts);
 
-    overlay.color = isError ? "#FF6666" : "#00FF00";
-    overlay.text = msg;
-    overlay.opacity = 0;
-    overlay.visible = true;
+    fadeText.color = isError ? "#FF6666" : "#FFFFFF";
+    fadeText.text = msg;
+    fadeText.opacity = 0;
+    fadeText.visible = true;
 
     var fadeInStart = now();
     var fadeIn = setInterval(function () {
       var p = Math.min(1, (now() - fadeInStart) / 700);
-      overlay.opacity = p;
-
+      fadeText.opacity = p;
       if (p >= 1) {
         clearInterval(fadeIn);
-
         var hold = setTimeout(function () {
           var fadeOutStart = now();
           var fadeOut = setInterval(function () {
             var p2 = 1 - Math.min(1, (now() - fadeOutStart) / 900);
-            overlay.opacity = p2;
-
+            fadeText.opacity = p2;
             if (p2 <= 0) {
               clearInterval(fadeOut);
-              overlay.visible = false;
+              fadeText.visible = false;
             }
           }, 16);
-
-          overlayTimers.push(fadeOut);
+          fadeTimeouts.push(fadeOut);
         }, 900);
-
-        overlayTimers.push(hold);
+        fadeTimeouts.push(hold);
       }
     }, 16);
-
-    overlayTimers.push(fadeIn);
+    fadeTimeouts.push(fadeIn);
   }
 
-  // == (7) BUFFER PROFILE ==
-  
-  function applyBufferProfile(obj) {
+  // ========== (5) EASING FUNCTION ==========
+  function easeInOut(t) {
+    return (1 - Math.cos(t * Math.PI)) / 2;
+  }
+
+  // ========== (6) APPLY LIVE TUNING ==========
+  function applyLiveTuning(obj) {
     if (!obj) return;
-
-    // Standard prebuffer behavior
-    safeSet(obj, "preload", "auto");
-
-    // Buffer-related hints for different player implementations
-    safeSet(obj, "bufferTime", CONFIG.bufferTime);
-    safeSet(obj, "bufferMemory", CONFIG.bufferMemory);
-    safeSet(obj, "bufferSize", CONFIG.bufferSize);
-    safeSet(obj, "bufferAhead", CONFIG.bufferAhead);
-    safeSet(obj, "minBufferTime", CONFIG.minBufferTime);
-    safeSet(obj, "maxBufferTime", CONFIG.maxBufferTime);
-    safeSet(obj, "startBufferTime", CONFIG.startBufferTime);
-
-    // Generic buffering flags
-    safeSet(obj, "useBuffer", true);
-    safeSet(obj, "enableBuffer", true);
-    safeSet(obj, "autoBuffer", true);
-    safeSet(obj, "allowBuffering", true);
-
-    // Playback defaults
-    safeSet(obj, "muted", false);
-    safeSet(obj, "volume", 1.0);
-
+    if (CONFIG.debug) console.log("[Player] Applying live‑stream tuning...");
     try {
-      if (obj.audioTracks) obj.audioTracks.enabled = true;
-    } catch (e) {}
+      if (typeof obj.backBufferLength !== 'undefined') obj.backBufferLength = CONFIG.backBufferLength;
+      if (typeof obj.liveBackBufferLength !== 'undefined') obj.liveBackBufferLength = CONFIG.liveBackBufferLength;
+      if (typeof obj.liveSyncDuration !== 'undefined') obj.liveSyncDuration = CONFIG.liveSyncDuration;
+      if (typeof obj.liveMaxLatency !== 'undefined') obj.liveMaxLatency = CONFIG.liveMaxLatency;
+      if (typeof obj.maxBufferLength !== 'undefined') obj.maxBufferLength = CONFIG.maxBufferLength;
+      if (typeof obj.maxMaxBufferLength !== 'undefined') obj.maxMaxBufferLength = CONFIG.maxMaxBufferLength;
+      if (typeof obj.maxBufferHole !== 'undefined') obj.maxBufferHole = CONFIG.maxBufferHole;
+      if (typeof obj.nudgeOffset !== 'undefined') obj.nudgeOffset = CONFIG.nudgeOffset;
+      if (typeof obj.nudgeMaxRetry !== 'undefined') obj.nudgeMaxRetry = CONFIG.nudgeMaxRetry;
+      if (typeof obj.highBufferWatchdogPeriod !== 'undefined') obj.highBufferWatchdogPeriod = CONFIG.highBufferWatchdogPeriod;
+      if (typeof obj.startFragPrefetch !== 'undefined') obj.startFragPrefetch = CONFIG.startFragPrefetch;
+      if (typeof obj.debug !== 'undefined') obj.debug = CONFIG.debug;
+
+      // Standard buffer hints
+      obj.bufferTime = 30;
+      obj.minBufferTime = 5;
+      obj.maxBufferTime = 60;
+      obj.bufferAhead = 30;
+      obj.preload = "auto";
+      obj.muted = false;
+      obj.volume = 1.0;
+    } catch(e) { if (CONFIG.debug) console.error("[Player] Error applying config:", e); }
   }
 
-  // == (8) WATCHDOGS ==
-
-  function stopWatchdog() {
-    if (watchdogTimer) {
-      clearInterval(watchdogTimer);
-      watchdogTimer = null;
-    }
-  }
-
-  function stopStartupTimer() {
-    if (startupTimer) {
-      clearTimeout(startupTimer);
-      startupTimer = null;
-    }
-  }
+  // ========== (7) WATCHDOG & TIMERS ==========
+  function stopWatchdog() { if (watchdogTimer) { clearInterval(watchdogTimer); watchdogTimer = null; } }
+  function stopStartupTimer() { if (startupTimer) { clearTimeout(startupTimer); startupTimer = null; } }
 
   function startWatchdog() {
     stopWatchdog();
-
-    lastCurrentTime = video ? (video.currentTime || 0) : 0;
+    if (!video) return;
+    lastCurrentTime = video.currentTime || 0;
     lastProgressAt = now();
 
     watchdogTimer = setInterval(function () {
       if (switching || !video) return;
-
       var state = video.state || "";
       if (state !== "Playing" && state !== "Buffering") return;
 
       var ct = video.currentTime || 0;
       var currentNow = now();
-
-      if (video.readyState && video.readyState < 2) return;
 
       if (ct !== lastCurrentTime) {
         lastCurrentTime = ct;
@@ -307,26 +236,14 @@
       }
 
       var stalledFor = currentNow - lastProgressAt;
-      var bufferedAhead = getBufferedAheadSeconds();
 
       if (state === "Playing") {
         if (stalledFor >= CONFIG.playingStallMs) {
           recoverSameUrl("Playback stalled");
         }
-        return;
-      }
-
-      if (state === "Buffering") {
-        // For high-quality streams, let it buffer much longer before recovery.
-        // If buffer is clearly progressing, stay hands-off.
-        if (bufferedAhead !== null && bufferedAhead > 0) {
-          if (stalledFor >= CONFIG.bufferingStallMs) {
-            recoverSameUrl("Buffering took too long");
-          }
-        } else {
-          if (stalledFor >= CONFIG.bufferingStallMs) {
-            recoverSameUrl("Buffering stuck");
-          }
+      } else if (state === "Buffering") {
+        if (stalledFor >= CONFIG.bufferingStallMs) {
+          recoverSameUrl("Buffering stuck");
         }
       }
     }, CONFIG.watchdogIntervalMs);
@@ -334,61 +251,34 @@
 
   function startStartupTimer() {
     stopStartupTimer();
-
     startupTimer = setTimeout(function () {
       if (!video || switching) return;
-
       var state = video.state || "";
       var ct = video.currentTime || 0;
-
       if (state === "Opening" || state === "Buffering" || ct === 0) {
         recoverSameUrl("Startup timeout");
       }
     }, CONFIG.startupGraceMs);
   }
 
-  // == (9) PLAYER LIFECYCLE ==
-
-  function destroyVideo() {
-    stopWatchdog();
-    stopStartupTimer();
-
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-
-    if (video) {
-      removeFromRoot(video);
-      closeVideo(video);
-      video = null;
-    }
-  }
-
+  // ========== (8) VIDEO LIFECYCLE ==========
   function buildVideo() {
     destroyVideo();
-
     var w = jsmaf.screenWidth || 1920;
     var h = jsmaf.screenHeight || 1080;
 
     video = new Video({
-      x: 0,
-      y: 0,
-      width: w,
-      height: h,
-      visible: true,
-      autoplay: true,
-      audio: true,
-      preload: "auto"
+      x: 0, y: 0, width: w, height: h,
+      visible: true, autoplay: true, audio: true
     });
 
-    applyBufferProfile(video);
+    applyLiveTuning(video);
 
     video.onOpen = function () {
+      if (CONFIG.debug) console.log("[Player] Video opened.");
       switching = false;
       lastCurrentTime = 0;
       lastProgressAt = now();
-      applyBufferProfile(video);
       safePlay();
       startWatchdog();
       startStartupTimer();
@@ -396,6 +286,7 @@
 
     video.onstatechange = function (state) {
       if (switching) return;
+      if (CONFIG.debug) console.log("[Player] State:", state);
 
       if (state === "Playing") {
         lastCurrentTime = video.currentTime || 0;
@@ -404,6 +295,7 @@
       }
 
       if (state === "Ended") {
+        // Handle end of stream (works for both VOD and live if the event ends)
         if (loopMode) {
           restartSameUrl(false);
         } else if (autoMode) {
@@ -427,58 +319,34 @@
 
   function openCurrentStream(silent) {
     if (!video) buildVideo();
-
     switching = true;
     stopWatchdog();
     stopStartupTimer();
-
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
 
     var url = currentUrl();
-
-    try {
-      closeVideo(video);
-    } catch (e) {}
+    closeVideo(video);
 
     setTimeout(function () {
-      try {
-        applyBufferProfile(video);
-        safeOpen(url);
-      } catch (e2) {}
+      applyLiveTuning(video);
+      safeOpen(url);
       switching = false;
       refreshGuardUntil = now() + CONFIG.refreshGuardMs;
       lastProgressAt = now();
       startWatchdog();
       startStartupTimer();
-
-      if (!silent) {
-        showMessage("Video " + (index + 1), false);
-      }
+      if (!silent) showMessage("Video " + (currentIndex + 1), false);
     }, 120);
   }
 
   function softReopenSameUrl() {
     if (!video || switching) return;
-
     switching = true;
     stopWatchdog();
     stopStartupTimer();
-
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-
     refreshGuardUntil = now() + CONFIG.refreshGuardMs;
-
-    try {
-      applyBufferProfile(video);
-      safeOpen(currentUrl());
-    } catch (e) {}
-
+    applyLiveTuning(video);
+    safeOpen(currentUrl());
     setTimeout(function () {
       switching = false;
       lastProgressAt = now();
@@ -489,28 +357,16 @@
 
   function hardRebuildSameUrl() {
     if (switching) return;
-
     switching = true;
     stopWatchdog();
     stopStartupTimer();
-
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-
     refreshGuardUntil = now() + CONFIG.refreshGuardMs;
-
     var url = currentUrl();
-
     destroyVideo();
-
     setTimeout(function () {
       buildVideo();
-      try {
-        applyBufferProfile(video);
-        safeOpen(url);
-      } catch (e2) {}
+      applyLiveTuning(video);
+      safeOpen(url);
       switching = false;
       lastProgressAt = now();
       startWatchdog();
@@ -524,67 +380,52 @@
     openCurrentStream(true);
   }
 
-
-  // == (10) RECOVERY  ==
+  // ========== (9) RECOVERY ==========
   function scheduleRetry(fn, attempt) {
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-
-    var delay = CONFIG.baseRetryDelayMs * Math.pow(2, Math.max(0, attempt - 1));
-    retryTimer = setTimeout(function () {
-      fn();
-    }, delay);
+    if (retryTimer) clearTimeout(retryTimer);
+    var delay = Math.min(CONFIG.baseRetryDelayMs * Math.pow(2, attempt - 1), 30000);
+    retryTimer = setTimeout(fn, delay);
   }
 
   function recoverSameUrl(reason) {
     if (switching) return;
-
-    var current = now();
-    if (current < refreshGuardUntil) return;
+    if (now() < refreshGuardUntil) return;
 
     sameUrlFailures += 1;
 
-    if (sameUrlFailures <= 2) {
-      showMessage(reason + " - retrying same stream", true);
-      scheduleRetry(function () {
-        softReopenSameUrl();
-      }, sameUrlFailures);
-      return;
-    }
-
     if (sameUrlFailures <= CONFIG.maxSameUrlRetries) {
-      showMessage(reason + " - rebuilding player", true);
-      scheduleRetry(function () {
-        hardRebuildSameUrl();
-      }, sameUrlFailures);
+      if (sameUrlFailures <= 2) {
+        showMessage(reason + " - retrying (" + sameUrlFailures + "/" + CONFIG.maxSameUrlRetries + ")", true);
+        scheduleRetry(function () { softReopenSameUrl(); }, sameUrlFailures);
+      } else {
+        showMessage(reason + " - rebuilding (" + sameUrlFailures + "/" + CONFIG.maxSameUrlRetries + ")", true);
+        scheduleRetry(function () { hardRebuildSameUrl(); }, sameUrlFailures);
+      }
       return;
     }
 
     sameUrlFailures = 0;
-    showMessage(reason + " - switching channel", true);
-    goNext(false);
+    showMessage(reason + " - retrying same stream again", true);
+    scheduleRetry(function () { softReopenSameUrl(); }, 1);
   }
 
+  // ========== (10) NAVIGATION & MODES ==========
   function goNext(silent) {
     if (STREAMS.length <= 1) return;
     sameUrlFailures = 0;
-    index = (index + 1) % STREAMS.length;
+    currentIndex = (currentIndex + 1) % STREAMS.length;
     openCurrentStream(silent);
-    if (!silent) showMessage("Next: Video " + (index + 1), false);
+    if (!silent) showMessage("Next: Video " + (currentIndex + 1), false);
   }
 
   function goPrev() {
     if (STREAMS.length <= 1) return;
     sameUrlFailures = 0;
-    index = (index - 1 + STREAMS.length) % STREAMS.length;
+    currentIndex = (currentIndex - 1 + STREAMS.length) % STREAMS.length;
     openCurrentStream(false);
-    showMessage("Previous: Video " + (index + 1), false);
+    showMessage("Previous: Video " + (currentIndex + 1), false);
   }
 
-  // == (11) MODES / INPUT ==
-  
   function toggleAuto() {
     autoMode = !autoMode;
     if (autoMode && loopMode) loopMode = false;
@@ -603,69 +444,157 @@
     openCurrentStream(true);
   }
 
-  function handleKeyDown(keyCode) {
-    switch (keyCode) {
-      case 5:
-        goNext(false);
-        break;
-      case 7:
-        goPrev();
-        break;
-      case 12:
-        toggleLoop();
-        break;
-      case 15:
-        toggleAuto();
-        break;
-      case 16:
-        manualRefresh();
-        break;
-      case 13:
-        if (retryTimer) clearTimeout(retryTimer);
-        jsmaf.setTimeout(function () {
-          if (typeof debugging !== "undefined" && debugging && typeof debugging.restart === "function") {
-            debugging.restart();
-          } else {
-            location.reload();
-          }
-        }, 100);
-        break;
-      default:
-        break;
+  // ========== (11) RESTART CLEANUP ==========
+  function performRestart() {
+    cancelAllTimers();
+    if (splashImage) {
+      removeFromRoot(splashImage);
+      splashImage = null;
+    }
+    destroyVideo();
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    splashActive = false;
+    splashSkipped = false;
+    switching = false;
+
+    if (typeof debugging !== "undefined" && debugging && typeof debugging.restart === "function") {
+      debugging.restart();
+    } else if (typeof location !== "undefined" && location && typeof location.reload === "function") {
+      location.reload();
+    } else if (jsmaf && typeof jsmaf.restart === "function") {
+      jsmaf.restart();
     }
   }
 
+  // ========== (12) KEY HANDLER ==========
+  function handleKeyDown(keyCode) {
+    if (splashActive && !splashSkipped) {
+      skipSplash();
+      return;
+    }
+
+    switch (keyCode) {
+      case 5:  goNext(false); break;
+      case 7:  goPrev(); break;
+      case 12: toggleLoop(); break;
+      case 15: toggleAuto(); break;
+      case 16: manualRefresh(); break;
+      case 13: performRestart(); break;
+      default: break;
+    }
+  }
+
+  // ========== (13) SPLASH SKIP ==========
+  function skipSplash() {
+    if (splashSkipped) return;
+    splashSkipped = true;
+    splashActive = false;
+    if (splashFadeInId) { clearInterval(splashFadeInId); splashFadeInId = null; }
+    if (splashHoldId) { clearTimeout(splashHoldId); splashHoldId = null; }
+    if (splashFadeOutId) { clearInterval(splashFadeOutId); splashFadeOutId = null; }
+    if (splashImage) {
+      removeFromRoot(splashImage);
+      splashImage = null;
+    }
+    buildVideo();
+    openCurrentStream(false);
+  }
+
+  // ========== (14) SPLASH WITH EASING ==========
+  function animateOpacity(obj, from, to, duration, onComplete) {
+    var startTime = now();
+    var interval = setInterval(function () {
+      var elapsed = now() - startTime;
+      var t = Math.min(elapsed / duration, 1);
+      var eased = easeInOut(t);
+      var value = from + (to - from) * eased;
+      try { obj.opacity = value; } catch(e) {}
+      if (t >= 1) {
+        clearInterval(interval);
+        if (onComplete) onComplete();
+      }
+    }, 16);
+    return interval;
+  }
+
+  function showNextSplashImage() {
+    if (splashSkipped) return;
+    if (splashStep >= SPLASH_IMAGES.length) {
+      splashActive = false;
+      buildVideo();
+      openCurrentStream(false);
+      return;
+    }
+
+    var screenW = jsmaf.screenWidth || 1920;
+    var screenH = jsmaf.screenHeight || 1080;
+
+    if (!splashImage) {
+      splashImage = new Image({
+        url: SPLASH_IMAGES[splashStep],
+        x: 0, y: 0, width: screenW, height: screenH,
+        visible: true, opacity: 0, zIndex: 1000
+      });
+      jsmaf.root.children.push(splashImage);
+    } else {
+      splashImage.url = SPLASH_IMAGES[splashStep];
+      splashImage.opacity = 0;
+      splashImage.visible = true;
+    }
+
+    splashFadeInId = animateOpacity(splashImage, 0, 1, SPLASH_FADE_IN, function () {
+      if (splashSkipped) return;
+      splashHoldId = setTimeout(function () {
+        if (splashSkipped) return;
+        splashFadeOutId = animateOpacity(splashImage, 1, 0, SPLASH_FADE_OUT, function () {
+          if (splashSkipped) return;
+          splashImage.visible = false;
+          splashStep++;
+          showNextSplashImage();
+        });
+      }, SPLASH_HOLD);
+    });
+  }
+
+  function showSplash() {
+    if (!SPLASH_IMAGES || SPLASH_IMAGES.length === 0) {
+      buildVideo();
+      openCurrentStream(false);
+      return;
+    }
+    splashActive = true;
+    splashSkipped = false;
+    splashStep = 0;
+    showNextSplashImage();
+  }
+
+  // ========== (15) NETWORK STATUS ==========
   function onNetworkStatusChange(status) {
     if (status === "connected") {
-      if (!connected) {
-        connected = true;
+      if (!networkConnected) {
+        networkConnected = true;
         showMessage("Network reconnected", false);
         manualRefresh();
       }
     } else if (status === "disconnected") {
-      connected = false;
+      networkConnected = false;
       showMessage("Network disconnected", true);
     }
   }
 
-  // == (12) INIT
-  
+  // ========== (16) INITIALISATION ==========
   try {
     jsmaf.remotePlay = true;
     jsmaf.onKeyDown = handleKeyDown;
 
-    var previousNetworkHandler = jsmaf.onNetworkStatusChange;
+    var prevNetworkHandler = jsmaf.onNetworkStatusChange;
     jsmaf.onNetworkStatusChange = function (status) {
-      try {
-        if (typeof previousNetworkHandler === "function") {
-          previousNetworkHandler(status);
-        }
-      } catch (e) {}
+      try { if (typeof prevNetworkHandler === "function") prevNetworkHandler(status); } catch(e) {}
       onNetworkStatusChange(status);
     };
 
-    buildVideo();
-    openCurrentStream(false);
+    showSplash();
+    if (CONFIG.debug) console.log("Player Loaded..");
   } catch (e) {
     alert("Error: " + e.message);
   }
