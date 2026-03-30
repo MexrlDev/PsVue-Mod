@@ -538,9 +538,20 @@
       highScore = score;
       saveProgress();
     }
-    if (gameOverText) gameOverText.visible = true;
-    if (startText) startText.visible = true;
-    startText.text = 'Press X to restart';
+
+    // Set game over message
+    if (gameOverText) {
+      gameOverText.text = 'You lost!';
+      gameOverText.visible = true;
+    }
+    if (startText) {
+      startText.text = 'Press X to retry';
+      startText.visible = true;
+      // Position startText directly below gameOverText
+      startText.y = gameOverText.y + 80; // 80px gap
+    }
+    if (logoImg) logoImg.visible = false;
+    if (winText) winText.visible = false;
     updateUI();
   }
 
@@ -551,9 +562,20 @@
       highScore = score;
       saveProgress();
     }
-    if (winText) winText.visible = true;
-    if (startText) startText.visible = true;
-    startText.text = 'Press X to restart with HARDER MODE!';
+
+    // Set win message
+    if (winText) {
+      winText.text = 'You win!';
+      winText.visible = true;
+    }
+    if (startText) {
+      startText.text = 'Press X to go to hard mode';
+      startText.visible = true;
+      // Position startText directly below winText
+      startText.y = winText.y + 80; // 80px gap
+    }
+    if (logoImg) logoImg.visible = false;
+    if (gameOverText) gameOverText.visible = false;
     updateUI();
   }
 
@@ -944,13 +966,39 @@
     livesText = new jsmaf.Text(); livesText.style = 'uiStyle'; livesText.x = 50; livesText.y = 170; livesText.text = 'Lives: 3';
     waveText = new jsmaf.Text(); waveText.style = 'uiStyle'; waveText.x = 50; waveText.y = 230; waveText.text = 'Wave: 1';
 
-    startText = new jsmaf.Text(); startText.style = 'uiStyle'; startText.x = SCREEN_W/2 - 250; startText.y = SCREEN_H/2 + 50; startText.text = 'Press X to start'; startText.visible = true;
+    // Center-aligned UI texts for start/game over/win
+    startText = new jsmaf.Text();
+    startText.style = 'uiStyle';
+    startText.halign = "center";
+    startText.x = SCREEN_W / 2;
+    startText.y = SCREEN_H / 2 + 100;
+    startText.text = 'Press X to start';
+    startText.visible = true;
+
     new Style({ name: 'pausedStyle', color: 'white', size: 96, bold: true, shadow: true });
-    pausedText = new jsmaf.Text(); pausedText.style = 'pausedStyle'; pausedText.x = SCREEN_W/2 - 200; pausedText.y = SCREEN_H/2 - 50; pausedText.text = 'PAUSED'; pausedText.visible = false;
+    pausedText = new jsmaf.Text();
+    pausedText.style = 'pausedStyle';
+    pausedText.halign = "center";
+    pausedText.x = SCREEN_W / 2;
+    pausedText.y = SCREEN_H / 2 - 50;
+    pausedText.text = 'PAUSED';
+    pausedText.visible = false;
 
-    gameOverText = new jsmaf.Text(); gameOverText.style = 'uiStyle'; gameOverText.x = SCREEN_W/2 - 200; gameOverText.y = SCREEN_H/2 - 100; gameOverText.text = 'GAME OVER'; gameOverText.visible = false;
+    gameOverText = new jsmaf.Text();
+    gameOverText.style = 'uiStyle';
+    gameOverText.halign = "center";
+    gameOverText.x = SCREEN_W / 2;
+    gameOverText.y = SCREEN_H / 2 - 100;
+    gameOverText.text = 'You lost!';
+    gameOverText.visible = false;
 
-    winText = new jsmaf.Text(); winText.style = 'uiStyle'; winText.x = SCREEN_W/2 - 150; winText.y = SCREEN_H/2 - 150; winText.text = 'YOU WIN!'; winText.visible = false;
+    winText = new jsmaf.Text();
+    winText.style = 'uiStyle';
+    winText.halign = "center";
+    winText.x = SCREEN_W / 2;
+    winText.y = SCREEN_H / 2 - 100;
+    winText.text = 'You win!';
+    winText.visible = false;
 
     // Logo
     logoImg = new Image({
