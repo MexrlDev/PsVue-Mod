@@ -1,18 +1,18 @@
-// Dump all jsmaf from your vue version
+// Dump all jsmaf for all vue version
+
+// Mow has auto testing dor you! so youll have it in your jsmaf already haha
 
 // By mexrldev 2026
 
 (function () {
-  var DUMP_PATH = '/download0/payloads/jsmaf_dump.json';
+  var DUMP_PATH = 'file://../download0/payloads/jsmaf_dump.json';
   var SCREEN_W = 1920;
   var SCREEN_H = 1080;
   var MAX_DEPTH = 24;
   var MAX_PREVIEW = 180;
 
-  var mode = 'menu'; //
+  var mode = 'menu';
   var dumpStarted = false;
-  var testEntries = null;
-  var testIndex = 0;
 
   var ui = {
     menu: [],
@@ -113,14 +113,15 @@
     resetUI();
 
     var cx = SCREEN_W / 2;
-    var y = SCREEN_H / 2 - 50;
+    var y = SCREEN_H / 2 - 30;
 
     ui.menu.push(addText('white', cx - 180, y, 'Press X (⨉) to dump jsmaf'));
-    ui.menu.push(addText('white', cx - 180, y + 60, 'Press SQUARE (◻) to test the dump'));
+    ui.menu.push(addText('white', cx - 180, y + 60, 'Press O (O) to reload debugging'));
     ui.menu.push(addText('white', 20, SCREEN_H - 40, 'Dump path: ' + DUMP_PATH));
   }
 
   function makePath(parentPath, key) {
+    if (key === '__proto__') return null;
     if (!parentPath) return String(key);
     return parentPath + '.' + String(key);
   }
@@ -151,12 +152,7 @@
       }
 
       if (part === '__proto__') {
-        try {
-          current = Object.getPrototypeOf(current);
-        } catch (e0) {
-          return undefined;
-        }
-        continue;
+        return undefined;
       }
 
       if (/^\d+$/.test(part)) {
@@ -190,14 +186,6 @@
     return '[object]';
   }
 
-  function primitiveEqual(a, b) {
-    if (a === b) return true;
-    if (typeof a === 'number' && typeof b === 'number') {
-      if (isNaN(a) && isNaN(b)) return true;
-    }
-    return false;
-  }
-
   function isVisited(vis, obj) {
     if (!vis) return false;
     if (typeof vis.indexOf === 'function') return vis.indexOf(obj) !== -1;
@@ -210,7 +198,7 @@
   }
 
   function dumpObject(rootObj, rootPath, visited, results, depth) {
-    var obj, props, i, key, fullPath, val, vt, entry;
+    var props, i, key, fullPath, val, vt, entry;
 
     if (depth > MAX_DEPTH) {
       results.push({ path: rootPath, type: 'depth_limit' });
@@ -245,7 +233,15 @@
 
     for (i = 0; i < props.length; i++) {
       key = props[i];
+
+      if (key === '__proto__') {
+        continue;
+      }
+
       fullPath = makePath(rootPath, key);
+      if (!fullPath) {
+        continue;
+      }
 
       try {
         val = rootObj[key];
@@ -320,6 +316,7 @@
 
     var results = [];
     var visited = [];
+
     try {
       if (!jsmaf) throw new Error('jsmaf is not available');
       dumpObject(jsmaf, 'jsmaf', visited, results, 0);
@@ -331,6 +328,7 @@
 
     writeFile(DUMP_PATH, JSON.stringify(results, null, 2), function (err) {
       if (ui.status) ui.status.visible = false;
+
       if (err) {
         showError('Write failed: ' + err.message);
         jsmaf.setTimeout(function () { showMenu(); }, 2000);
@@ -342,215 +340,6 @@
         if (ui.status) ui.status.visible = false;
         showMenu();
       }, 2000);
-    });
-  }
-
-  function functionCallShouldSkip(path) {
-    var p = String(path || '').toLowerCase();
-    var blocked = [
-      'exit',
-      'restart',
-      'shutdown',
-      'forceshutdown',
-      'forceconnect',
-      'openwebbrowser',
-      'alert',
-      'eval',
-      'include',
-      'settimeout',
-      'setinterval',
-      'clearinterval',
-      'cleartimeout',
-      'showosk'
-    ];
-    var i;
-    for (i = 0; i < blocked.length; i++) {
-      if (p.indexOf(blocked[i]) !== -1) return true;
-    }
-    return false;
-  }
-
-  function testFunctionIfSafe(path, fn) {
-    if (typeof fn !== 'function') return { skipped: true, note: 'not a function' };
-    if (functionCallShouldSkip(path)) return { skipped: true, note: 'skipped dangerous function' };
-
-    try {
-      if (fn.length === 0) {
-        var r = fn();
-        return { skipped: false, ok: true, result: previewValue(r) };
-      }
-      return { skipped: true, note: 'function has arguments; skipped' };
-    } catch (e) {
-      return { skipped: false, ok: false, error: e.message };
-    }
-  }
-
-  function testEntry(entry) {
-    var path = entry.path;
-    var expectedType = entry.type;
-    var expectedValue = hasOwn(entry, 'value') ? entry.value : undefined;
-    var actualValue;
-    var actualType;
-    var typePass = false;
-    var valuePass = true;
-    var callResult = null;
-    var error = null;
-
-    try {
-      actualValue = resolvePath(jsmaf, path);
-      actualType = typeOfValue(actualValue);
-
-      if (expectedType === 'circular') {
-        typePass = true;
-      } else if (expectedType === 'accessor') {
-        typePass = true;
-      } else if (expectedType === 'depth_limit') {
-        typePass = true;
-      } else if (expectedType === 'inaccessible' || expectedType === 'error') {
-        typePass = true;
-      } else {
-        typePass = (actualType === expectedType);
-      }
-
-      if (hasOwn(entry, 'value')) {
-        valuePass = primitiveEqual(expectedValue, actualValue);
-      }
-    } catch (e0) {
-      actualType = 'error';
-      error = e0.message;
-      typePass = false;
-      valuePass = false;
-    }
-
-    if (actualType === 'function' && actualValue !== undefined && actualValue !== null) {
-      callResult = testFunctionIfSafe(path, actualValue);
-    }
-
-    return {
-      path: path,
-      expected: expectedType,
-      expectedValue: expectedValue,
-      actual: actualType,
-      actualValue: actualValue,
-      typePass: typePass,
-      valuePass: valuePass,
-      callResult: callResult,
-      error: error
-    };
-  }
-
-  function updateTestDisplay() {
-    var entry, result, lines, overallPass, preview;
-
-    if (!testEntries || testIndex >= testEntries.length) {
-      if (ui.header) ui.header.text = 'Test finished';
-      if (ui.body) {
-        ui.body.style = 'green';
-        ui.body.text = 'All tests completed!';
-      }
-      return;
-    }
-
-    entry = testEntries[testIndex];
-    result = testEntry(entry);
-
-    if (ui.header) ui.header.text = 'Test ' + (testIndex + 1) + ' / ' + testEntries.length;
-
-    lines = [];
-    lines.push('Path: ' + result.path);
-    lines.push('Expected: ' + result.expected);
-    lines.push('Actual: ' + result.actual);
-
-    if (hasOwn(entry, 'value')) {
-      lines.push('Expected value: ' + safeStringify(result.expectedValue));
-    }
-
-    if (result.actual !== 'object' && result.actual !== 'function') {
-      preview = previewValue(result.actualValue);
-      lines.push('Current value: ' + preview);
-    } else if (result.actual === 'string') {
-      lines.push('Current value: ' + previewValue(result.actualValue));
-    }
-
-    if (result.error) {
-      lines.push('Error: ' + result.error);
-    }
-
-    lines.push('');
-    lines.push(result.typePass ? 'type PASS' : 'type FAIL');
-
-    if (hasOwn(entry, 'value')) {
-      lines.push(result.valuePass ? 'value PASS' : 'value FAIL');
-    }
-
-    if (result.callResult) {
-      lines.push('');
-      lines.push('Function test:');
-      if (result.callResult.skipped) {
-        lines.push('  skipped: ' + result.callResult.note);
-      } else if (result.callResult.ok) {
-        lines.push('  ✓ call success: ' + result.callResult.result);
-      } else {
-        lines.push('  ✗ call failed: ' + result.callResult.error);
-      }
-    }
-
-    if (ui.body) {
-      ui.body.text = lines.join('\n');
-      overallPass = result.typePass && result.valuePass && (!result.callResult || result.callResult.skipped || result.callResult.ok);
-      ui.body.style = overallPass ? 'green' : 'red';
-    }
-
-    if (ui.footer) {
-      ui.footer.text = 'LEFT (◀) next test | BACK (O) restart';
-    }
-  }
-
-  function showTestUI() {
-    mode = 'test';
-    resetUI();
-
-    ui.header = addText('cyan', 20, 20, '');
-    ui.body = addText('white', 20, 120, '');
-    ui.footer = addText('small', 20, SCREEN_H - 60, 'LEFT (◀) next test | BACK (O) restart');
-
-    updateTestDisplay();
-  }
-
-  function nextTest() {
-    if (!testEntries || !testEntries.length) return;
-    if (testIndex + 1 < testEntries.length) {
-      testIndex++;
-    } else {
-      testIndex = testEntries.length;
-    }
-    updateTestDisplay();
-  }
-
-  function loadAndTest() {
-    mode = 'test';
-    resetUI();
-    showStatus('Loading JSON...', 'yellow', SCREEN_H / 2);
-
-    readFile(DUMP_PATH, function (err, data) {
-      if (ui.status) ui.status.visible = false;
-
-      if (err) {
-        showError('Could not read dump: ' + err.message);
-        jsmaf.setTimeout(function () { showMenu(); }, 2000);
-        return;
-      }
-
-      try {
-        var parsed = JSON.parse(data);
-        if (!isArray(parsed)) throw new Error('JSON root is not an array');
-        testEntries = parsed;
-        testIndex = 0;
-        showTestUI();
-      } catch (e0) {
-        showError('Invalid JSON: ' + e0.message);
-        jsmaf.setTimeout(function () { showMenu(); }, 2000);
-      }
     });
   }
 
@@ -571,17 +360,18 @@
   }
 
   jsmaf.onKeyDown = function (keyCode) {
+    if (keyCode === 13) {
+      restartApp();
+      return;
+    }
+
     if (mode === 'menu') {
       if (keyCode === 14 && !dumpStarted) {
         dumpStarted = true;
         performDump();
-      } else if (keyCode === 15) {
-        loadAndTest();
       }
-    } else if (mode === 'test') {
-      if (keyCode === 7) {
-        nextTest();
-      } else if (keyCode === 13) {
+    } else if (mode === 'dump') {
+      if (keyCode === 13) {
         restartApp();
       }
     }
