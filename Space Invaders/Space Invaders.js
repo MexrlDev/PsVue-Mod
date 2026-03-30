@@ -1,5 +1,6 @@
 // Vue Space Invaders
-// Author: MexrlDev
+
+// Author: MexrlDev 2026
 
 (function () {
   // ---------------- Configuration ----------------
@@ -63,7 +64,7 @@
   var ALIEN_FIRE_VARIATION = 20;
   var BASE_FIRE_PROB = 0.25;
 
-  // Powerâups
+  // Power‑ups
   var POWERUP_SPEED = 5;
   var POWERUP_CHANCE = 0.15;
   var POWERUP_TYPES = ['spread', 'laser', 'extra', 'shield'];
@@ -73,7 +74,7 @@
   // Spread levels
   var MAX_SPREAD_LEVEL = 5;
 
-  // Active powerâups
+  // Active power‑ups
   var activePowerups = {
     spread: { timer: 0, level: 0 },
     laser: 0,
@@ -82,11 +83,15 @@
 
   var laserFireCounter = 0;
 
+  // Hard mode progression (increases alien bullet speed)
+  var hardModeBonusSpeed = 0;  // each win adds +2 to alien bullet speed
+  var WIN_WAVE_THRESHOLD = 10;
+
   // Layers
   var layerOrder = ['background', 'aliens', 'powerups', 'player_bullets', 'alien_bullets', 'cannon', 'shield', 'ui'];
 
   // ---------------- Global State ----------------
-  var STATE_START = 0, STATE_PLAYING = 1, STATE_GAMEOVER = 2;
+  var STATE_START = 0, STATE_PLAYING = 1, STATE_GAMEOVER = 2, STATE_WIN = 3;
   var gameState = STATE_START;
   var paused = false;
 
@@ -101,7 +106,7 @@
     ui: []
   };
 
-  // Object pools
+  // Object pools (larger pools to avoid starvation)
   var alienPool = [];
   var playerBulletPool = [];
   var alienBulletPool = [];
@@ -125,7 +130,7 @@
 
   // UI elements
   var scoreText, highScoreText, livesText, waveText;
-  var startText, gameOverText, pausedText;
+  var startText, gameOverText, pausedText, winText;
   var logoImg;
   var shieldImg;
 
@@ -187,7 +192,7 @@
     for (var k = 0; k < children.length; k++) jsmaf.root.children.push(children[k]);
   }
 
-  // ---------------- Object Pools ----------------
+  // ---------------- Object Pools (with on-demand creation) ----------------
   function createAlienPool(size) {
     for (var i = 0; i < size; i++) {
       var img = new Image({
@@ -422,7 +427,7 @@
     }
   }
 
-  // ---------------- Reset Game ----------------
+  // ---------------- Reset Game (preserves hardModeBonusSpeed) ----------------
   function resetGame() {
     lives = 3;
     score = 0;
@@ -447,6 +452,7 @@
     if (logoImg) logoImg.visible = false;
     if (startText) startText.visible = false;
     if (gameOverText) gameOverText.visible = false;
+    if (winText) winText.visible = false;
     if (pausedText) pausedText.visible = false;
     if (shieldImg) shieldImg.visible = false;
     updateUI();
@@ -474,6 +480,19 @@
     updateUI();
   }
 
+  // ---------------- Win (after wave 10) ----------------
+  function winGame() {
+    gameState = STATE_WIN;
+    if (score > highScore) {
+      highScore = score;
+      saveProgress();
+    }
+    if (winText) winText.visible = true;
+    if (startText) startText.visible = true;
+    startText.text = 'Press X to restart with HARDER MODE!';
+    updateUI();
+  }
+
   // ---------------- Next Wave ----------------
   function nextWave() {
     wave++;
@@ -489,6 +508,12 @@
       layers.cannon[0].y = cannon.y;
     }
 
+    // After completing wave 10 (wave becomes 11), trigger win
+    if (wave > WIN_WAVE_THRESHOLD) {
+      winGame();
+      return;
+    }
+
     spawnWave();
   }
 
@@ -500,7 +525,7 @@
              r2.y + r2.h < r1.y);
   }
 
-  // ---------------- Apply Powerâup ----------------
+  // ---------------- Apply Power‑up ----------------
   function applyPowerup(type) {
     switch (type) {
       case 'spread':
@@ -511,7 +536,7 @@
         activePowerups.laser = POWERUP_DURATION;
         break;
       case 'extra':
-        lives++;
+        if (lives < 5) lives++;
         break;
       case 'shield':
         activePowerups.shield = SHIELD_DURATION;
@@ -519,7 +544,7 @@
     }
   }
 
-  // ---------------- Player Fire (Fixed) ----------------
+  // ---------------- Player Fire (fixed) ----------------
   function playerFire() {
     if (fireCooldown > 0 && activePowerups.laser <= 0) return;
     if (activePowerups.laser <= 0) {
@@ -548,7 +573,7 @@
   function updateGame() {
     if (gameState !== STATE_PLAYING || paused) return;
 
-    // Decrement powerâup timers
+    // Decrement power‑up timers
     if (activePowerups.spread.timer > 0) {
       activePowerups.spread.timer--;
       if (activePowerups.spread.timer === 0) {
@@ -567,7 +592,7 @@
       }
     }
 
-    // Laser autoâfire
+    // Laser auto‑fire
     if (activePowerups.laser > 0) {
       laserFireCounter--;
       if (laserFireCounter <= 0) {
@@ -675,7 +700,8 @@
       }
     }
 
-    var alienBulletSpeed = ALIEN_BULLET_BASE_SPEED + (wave - 1) * ALIEN_BULLET_SPEED_INCR;
+    // Alien bullets with progressive difficulty (hardModeBonusSpeed)
+    var alienBulletSpeed = ALIEN_BULLET_BASE_SPEED + (wave - 1) * ALIEN_BULLET_SPEED_INCR + hardModeBonusSpeed;
     for (var i = activeAlienBullets.length - 1; i >= 0; i--) {
       var b = activeAlienBullets[i];
       b.y += alienBulletSpeed;
@@ -742,8 +768,15 @@
     }
     else if (keyCode === 14) {
       if (gameState === STATE_START || gameState === STATE_GAMEOVER) {
+        // Normal restart: reset hardModeBonusSpeed to 0
+        hardModeBonusSpeed = 0;
         resetGame();
-      } else if (gameState === STATE_PLAYING && !paused) {
+      }
+      else if (gameState === STATE_WIN) {
+        hardModeBonusSpeed += 2;
+        resetGame();
+      }
+      else if (gameState === STATE_PLAYING && !paused) {
         if (activePowerups.laser <= 0) {
           playerFire();
         }
@@ -795,11 +828,11 @@
     });
     layers.shield.push(shieldImg);
 
-    // Pools
+    // Pools (larger to prevent starvation)
     createAlienPool(MAX_ROWS * MAX_COLS + 20);
-    createPlayerBulletPool(30);
-    createAlienBulletPool(50);
-    createPowerupPool(20);
+    createPlayerBulletPool(100);
+    createAlienBulletPool(100);
+    createPowerupPool(50);
 
     // UI
     new Style({ name: 'uiStyle', color: 'white', size: 48, bold: true, shadow: true });
@@ -814,6 +847,8 @@
 
     gameOverText = new jsmaf.Text(); gameOverText.style = 'uiStyle'; gameOverText.x = SCREEN_W/2 - 200; gameOverText.y = SCREEN_H/2 - 100; gameOverText.text = 'GAME OVER'; gameOverText.visible = false;
 
+    winText = new jsmaf.Text(); winText.style = 'uiStyle'; winText.x = SCREEN_W/2 - 150; winText.y = SCREEN_H/2 - 150; winText.text = 'YOU WIN!'; winText.visible = false;
+
     // Logo
     logoImg = new Image({
       url: ASSET_PATH + 'logo.png',
@@ -824,7 +859,7 @@
       visible: true
     });
 
-    layers.ui.push(logoImg, scoreText, highScoreText, livesText, waveText, startText, pausedText, gameOverText);
+    layers.ui.push(logoImg, scoreText, highScoreText, livesText, waveText, startText, pausedText, gameOverText, winText);
 
     rebuildRootChildren();
 
@@ -845,7 +880,7 @@
     for (var n in layers) if (layers.hasOwnProperty(n)) layers[n].length = 0;
   }
 
-  var GLOBAL_KEY = '__invadersFinal_v3';
+  var GLOBAL_KEY = '__invadersFinal_v4';
   var prev = (typeof window !== 'undefined' && window[GLOBAL_KEY]) || null;
   if (prev && typeof prev.cleanup === 'function') { try { prev.cleanup(); } catch (e) {} }
   var instance = { cleanup: cleanup };
@@ -855,6 +890,6 @@
   loadSave(function () {
     buildUI();
     frameInterval = jsmaf.setInterval(gameLoop, 16);
-    log('Space Invaders with shield visual and laser auto only loaded! Press X to start.');
+    log('Space Invaders loded.');
   });
 })();
