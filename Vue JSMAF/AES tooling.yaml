@@ -1,0 +1,136 @@
+name: AES Tooling
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Choose decrypt or encrypt"
+        required: true
+        default: decrypt
+        type: choice
+        options:
+          - decrypt
+          - encrypt
+
+      folder:
+        description: "Root folder to process (example: aes or js)"
+        required: true
+        default: aes
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install cryptography
+
+      - name: Decrypt or encrypt files
+        shell: bash
+        run: |
+          python <<'PY'
+          import base64
+          import os
+          import shutil
+          import zipfile
+          from pathlib import Path
+
+          from cryptography.hazmat.backends import default_backend
+          from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+          KEY = b"SENTV0ASDKFGJJLFJSJKLFJKOEKFSPKP"
+          IV = base64.b64decode("gI1zB0GB+Z5AiNhwZXeKZw==")
+
+          MODE = os.environ.get("MODE", "decrypt").strip().lower()
+          FOLDER = os.environ.get("FOLDER", "").strip()
+
+          if not FOLDER:
+              raise SystemExit("Folder input is required.")
+
+          repo_root = Path(".").resolve()
+          folder_path = (repo_root / FOLDER).resolve()
+
+          if not folder_path.exists() or not folder_path.is_dir():
+              raise SystemExit(f"Folder not found: {FOLDER}")
+
+          out_root = repo_root / "outputs"
+          work_root = out_root / MODE
+          zip_path = out_root / f"{MODE}.zip"
+
+          if out_root.exists():
+              shutil.rmtree(out_root)
+          work_root.mkdir(parents=True, exist_ok=True)
+
+          def decrypt_bytes(data: bytes) -> bytes:
+              cipher = Cipher(algorithms.AES(KEY), modes.CBC(IV), backend=default_backend())
+              decryptor = cipher.decryptor()
+              return (decryptor.update(data) + decryptor.finalize()).rstrip(b"\x00")
+
+          def encrypt_bytes(data: bytes) -> bytes:
+              pad = (16 - (len(data) % 16)) % 16
+              if pad:
+                  data += b"\x00" * pad
+              cipher = Cipher(algorithms.AES(KEY), modes.CBC(IV), backend=default_backend())
+              encryptor = cipher.encryptor()
+              return encryptor.update(data) + encryptor.finalize()
+
+          def write_zip(folder: Path, archive: Path):
+              with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                  for path in folder.rglob("*"):
+                      if path.is_file():
+                          zf.write(path, path.relative_to(folder).as_posix())
+
+          if MODE == "decrypt":
+              targets = [p for p in folder_path.rglob("*.aes") if p.is_file()]
+              if not targets:
+                  raise SystemExit(f"No .aes files found under: {FOLDER}")
+
+              for src in targets:
+                  rel = src.relative_to(repo_root)
+                  out_rel = rel.with_suffix("")  # remove final .aes
+                  dst = work_root / out_rel
+                  dst.parent.mkdir(parents=True, exist_ok=True)
+                  dst.write_bytes(decrypt_bytes(src.read_bytes()))
+                  print(f"Decrypted: {rel} -> {out_rel}")
+
+              write_zip(work_root, zip_path)
+              print(f"Created zip: {zip_path}")
+
+          elif MODE == "encrypt":
+              targets = [p for p in folder_path.rglob("*") if p.is_file()]
+              if not targets:
+                  raise SystemExit(f"No files found under: {FOLDER}")
+
+              for src in targets:
+                  rel = src.relative_to(repo_root)
+                  out_rel = Path(str(rel) + ".aes")
+                  dst = work_root / out_rel
+                  dst.parent.mkdir(parents=True, exist_ok=True)
+                  dst.write_bytes(encrypt_bytes(src.read_bytes()))
+                  print(f"Encrypted: {rel} -> {out_rel}")
+
+              write_zip(work_root, zip_path)
+              print(f"Created zip: {zip_path}")
+
+          else:
+              raise SystemExit("Invalid MODE. Use decrypt or encrypt.")
+          PY
+        env:
+          MODE: ${{ inputs.mode }}
+          FOLDER: ${{ inputs.folder }}
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.mode }}-output
+          path: outputs/${{ inputs.mode }}.zip
+          if-no-files-found: error
