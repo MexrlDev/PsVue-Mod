@@ -1,5 +1,5 @@
 // JSMAF Dumper for Vue 1.01
-// By mexrldev 2026, adapted for consistent environment
+// By mexrldev 2026, untested yet
 
 (function() {
     var DUMP_PATH = 'file://../download0/classic/jsmaf_dump.json';
