@@ -1,5 +1,4 @@
 // Vue Space Invaders
-
 // Author: MexrlDev 2026
 
 (function () {
@@ -7,6 +6,11 @@
   var SCREEN_W = 1920, SCREEN_H = 1080;
   var ASSET_PATH = 'file:///../download0/payloads/invaders/';
   var SAVE_PATH = '/download0/payloads/invaders/save.json';
+
+  // Text positioning (easy to edit)
+  var TEXT_BASE_Y = SCREEN_H / 2 - 100;     // base Y for main messages (You lost! / You win!)
+  var TEXT_VERTICAL_GAP = 80;               // gap between main message and startText
+  var START_TEXT_OFFSET_X = 0;              // horizontal offset for startText (0 = centered)
 
   // Original dimensions
   var BG_ORIG_W = 640, BG_ORIG_H = 960;
@@ -539,7 +543,6 @@
       saveProgress();
     }
 
-    // Set game over message
     if (gameOverText) {
       gameOverText.text = 'You lost!';
       gameOverText.visible = true;
@@ -547,8 +550,8 @@
     if (startText) {
       startText.text = 'Press X to retry';
       startText.visible = true;
-      // Position startText directly below gameOverText
-      startText.y = gameOverText.y + 80; // 80px gap
+      // Position startText directly below gameOverText with vertical gap
+      startText.y = gameOverText.y + TEXT_VERTICAL_GAP;
     }
     if (logoImg) logoImg.visible = false;
     if (winText) winText.visible = false;
@@ -563,7 +566,6 @@
       saveProgress();
     }
 
-    // Set win message
     if (winText) {
       winText.text = 'You win!';
       winText.visible = true;
@@ -571,8 +573,8 @@
     if (startText) {
       startText.text = 'Press X to go to hard mode';
       startText.visible = true;
-      // Position startText directly below winText
-      startText.y = winText.y + 80; // 80px gap
+      // Position startText directly below winText with vertical gap
+      startText.y = winText.y + TEXT_VERTICAL_GAP;
     }
     if (logoImg) logoImg.visible = false;
     if (gameOverText) gameOverText.visible = false;
@@ -970,8 +972,8 @@
     startText = new jsmaf.Text();
     startText.style = 'uiStyle';
     startText.halign = "center";
-    startText.x = SCREEN_W / 2;
-    startText.y = SCREEN_H / 2 + 100;
+    startText.x = SCREEN_W / 2 + START_TEXT_OFFSET_X;
+    startText.y = TEXT_BASE_Y + TEXT_VERTICAL_GAP; // temporary, will be adjusted in states
     startText.text = 'Press X to start';
     startText.visible = true;
 
@@ -988,7 +990,7 @@
     gameOverText.style = 'uiStyle';
     gameOverText.halign = "center";
     gameOverText.x = SCREEN_W / 2;
-    gameOverText.y = SCREEN_H / 2 - 100;
+    gameOverText.y = TEXT_BASE_Y;
     gameOverText.text = 'You lost!';
     gameOverText.visible = false;
 
@@ -996,7 +998,7 @@
     winText.style = 'uiStyle';
     winText.halign = "center";
     winText.x = SCREEN_W / 2;
-    winText.y = SCREEN_H / 2 - 100;
+    winText.y = TEXT_BASE_Y;
     winText.text = 'You win!';
     winText.visible = false;
 
