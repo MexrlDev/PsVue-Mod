@@ -1,17 +1,28 @@
 // Originally by ArabPixel and Earthonion
+
 // https://github.com/ArabPixel/psvue-theming/
 
-// Include the bypass
-include("classic/bypassPSN.js");
 
-// To load from classic folder
-var themeName = "classic";
+(function() {
+    const THEME_FOLDER = "classic";
 
-// Keep localStorage compatibility for any external scripts that might read "theme".
-// If a previous theme index exists, it is ignored; we always load the classic theme.
-localStorage.setItem("theme", "0");
+    // Helper to include files (catches errors if include() fails)
+    function safeInclude(filePath) {
+        try {
+            include(filePath);
+        } catch (e) {
+            console.error(`[Theming] Failed to include ${filePath}:`, e);
+        }
+    }
 
-localStorage.setItem("themes", JSON.stringify(["classic"]));
+    // 1. Load the bypass script (PSN related)
+    safeInclude(`${THEME_FOLDER}/bypassPSN.js`);
 
-// Load the script
-include("classic/" + themeName + "/payloads.js");
+    // 2. Set localStorage keys for compatibility with older code.
+    //    Even though there's only one theme, we store a minimal list.
+    localStorage.setItem("themes", JSON.stringify(["classic"]));
+    localStorage.setItem("theme", "0");   // index 0 points to the only theme
+
+    // 3. Load the main payload script
+    safeInclude(`${THEME_FOLDER}/payloads.js`);
+})();
