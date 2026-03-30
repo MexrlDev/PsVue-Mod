@@ -2,9 +2,6 @@
 
 // Author: MexrlDev 2026
 
-// Vue Space Invaders - Enhanced with Persistent Score on Win & Respawn Flashing
-// Author: MexrlDev
-
 (function () {
   // ---------------- Configuration ----------------
   var SCREEN_W = 1920, SCREEN_H = 1080;
