@@ -78,6 +78,7 @@
   var defaultBgmUrl = baseUrl + 'bgm.wav';
   var autoBgmUrl = baseUrl + 'auto.wav';
   var favConfigPath = baseUrl + 'Fav.json';
+  var secretImgUrl = baseUrl + 'Secret.png';
 
   // UI
   var screenWidth = 1920;
@@ -378,6 +379,18 @@
     return (ext === 'wav');
   }
 
+  function isBlockedFile(item) {
+    if (!item || item.isDir) return false;
+    var ext = (item.name || '').split('.').pop().toLowerCase();
+    return (ext === 'cfg' || ext === 'shn');
+  }
+
+  function isSecretXplorerFile(item) {
+    if (!item || item.isDir) return false;
+    var name = item.name || '';
+    return name.toLowerCase() === 'nonstop.xplorer';
+  }
+
   function toDisplayImageUrl(path) {
     path = toFsPath(path);
     return 'file:///..' + path;
@@ -556,7 +569,6 @@
 
     var token = ++bgmGeneration;
 
-    // Determine which BGM URL to use
     var bgmUrlToUse = defaultBgmUrl;
     var autoWavFsPath = toFsPath(autoBgmUrl.replace('file:///..', ''));
     if (fileExists(autoWavFsPath)) {
@@ -751,6 +763,13 @@
     }
   }
   // End Music Player 
+
+  function detachElement(el) {
+    if (!el) return;
+    try { el.visible = false; } catch (e) {}
+    try { el.url = ''; } catch (e2) {}
+    removeElement(el);
+  }
 
   function hardReleaseAllAssets() {
     try { closePopup(); } catch (e1) {}
@@ -1877,6 +1896,81 @@
     if (persistentPathText) persistentPathText.visible = true;
   }
 
+  // Special function to open secret image for NoneStop.Xplorer
+  function openSecretImage() {
+    closeImageViewer();
+    imageViewerActive = true;
+
+    for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
+    for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
+    for (var k = 0; k < rowIcons.length; k++) if (rowIcons[k]) rowIcons[k].visible = false;
+    for (var l = 0; l < rowTexts.length; l++) if (rowTexts[l]) rowTexts[l].visible = false;
+    if (persistentPathText) persistentPathText.visible = false;
+
+    imageViewerOverlay = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+    imageViewerOverlay.alpha = 0.7;
+    imageViewerOverlay.background = 'black';
+    jsmaf.root.children.push(imageViewerOverlay);
+
+    imageViewerBg = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+    imageViewerBg.alpha = 0.2;
+    imageViewerBg.background = '#222';
+    jsmaf.root.children.push(imageViewerBg);
+
+    var tempImg = new Image();
+    tempImg.onload = function () {
+      try {
+        var origW = tempImg.width || 0;
+        var origH = tempImg.height || 0;
+        if (!origW || !origH) { origW = 1280; origH = 720; }
+        var maxW = screenWidth * 0.9;
+        var maxH = screenHeight * 0.9;
+        var displayW = origW;
+        var displayH = origH;
+        var scale = Math.min(maxW / displayW, maxH / displayH, 1);
+        displayW = displayW * scale;
+        displayH = displayH * scale;
+        var imgX = (screenWidth - displayW) / 2;
+        var imgY = (screenHeight - displayH) / 2;
+        imageDisplay = new Image({ url: secretImgUrl, x: imgX, y: imgY, width: displayW, height: displayH });
+        imageDisplay.alpha = 1;
+        jsmaf.root.children.push(imageDisplay);
+        imageViewerCloseHint = new jsmaf.Text();
+        imageViewerCloseHint.text = 'Circle to close image';
+        imageViewerCloseHint.x = 40;
+        imageViewerCloseHint.y = screenHeight - 60;
+        imageViewerCloseHint.style = 'small';
+        jsmaf.root.children.push(imageViewerCloseHint);
+      } catch (e) {
+        showError('Failed to open secret image: ' + (e.message || e));
+        closeImageViewer();
+      }
+    };
+    tempImg.onerror = function () {
+      showError('Failed to load secret image: Secret.png');
+      closeImageViewer();
+    };
+    tempImg.url = secretImgUrl;
+  }
+
+  // Sanitize text for viewer: remove non-printable chars and limit length
+  function sanitizeTextForDisplay(rawText) {
+    if (typeof rawText !== 'string') return '(empty)';
+    var maxLen = 50000;
+    var truncated = rawText.length > maxLen ? rawText.slice(0, maxLen) + '\n... (truncated)' : rawText;
+    var cleaned = '';
+    for (var i = 0; i < truncated.length; i++) {
+      var code = truncated.charCodeAt(i);
+      // Allow newline, carriage return, tab; replace other controls with space
+      if (code === 10 || code === 13 || code === 9 || (code >= 32 && code <= 126) || code >= 160) {
+        cleaned += truncated[i];
+      } else {
+        cleaned += ' ';
+      }
+    }
+    return cleaned || '(empty)';
+  }
+
   function confirmSelection() {
     if (helpActive) return;
     if (viewerActive) return;
@@ -1909,6 +2003,14 @@
         refreshDirectoryData();
         refreshPathLabel();
       } else {
+        if (isBlockedFile(item)) {
+          showError('this could crash vue\n thanks to Stand for feedback');
+          return;
+        }
+        if (isSecretXplorerFile(item)) {
+          openSecretImage();
+          return;
+        }
         if (isImageFile(item)) openImageViewer(item);
         else if (isWavFile(item)) openMusicPlayer(item);
         else openTextViewer(item);
@@ -1925,6 +2027,14 @@
       refreshDirectoryData();
       refreshPathLabel();
     } else {
+      if (isBlockedFile(item)) {
+        showError('this could crash vue\n thanks to Stand for feedback');
+        return;
+      }
+      if (isSecretXplorerFile(item)) {
+        openSecretImage();
+        return;
+      }
       if (isImageFile(item)) openImageViewer(item);
       else if (isWavFile(item)) openMusicPlayer(item);
       else openTextViewer(item);
@@ -2213,6 +2323,7 @@
     viewerScroll = 0;
     readFileContent(item.path, function (err, text) {
       if (err) { showError('Cannot preview: ' + (err.message || err)); return; }
+      var safeText = sanitizeTextForDisplay(text);
       viewerActive = true;
       for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
       for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
@@ -2247,7 +2358,7 @@
       jsmaf.root.children.push(viewerContent);
 
       scheduleTimeout(function () {
-        try { viewerContent.text = (text && text.length > 0) ? text : '(empty)'; }
+        try { viewerContent.text = safeText; }
         catch (e) { viewerContent.text = '(error rendering text)'; }
       }, 50);
 
