@@ -1,6 +1,6 @@
-// PsVue File Xplorer.. or File Xplorer
+// PsVue File Xplorer.. or File Explorer
 // Made by MexrlDev
-//
+
 // Fun Fact, this is a remastered version of my old first project for vue, the legacy File Explorer.
 
 (function () {
@@ -50,7 +50,7 @@
   }
   globalCleanup();
 
-  // Syscalls ( Not saying i dont have that in my repo :3 )
+  // Syscalls
   try { fn.register(0x05, 'open_sys', ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x06, 'close_sys', ['bigint'], 'bigint'); } catch (e) {}
   try { fn.register(0x110, 'getdents', ['bigint', 'bigint', 'bigint'], 'bigint'); } catch (e) {}
@@ -75,7 +75,8 @@
   var selectedImgUrl = baseUrl + 'list-selected.png';
   var popupBgUrl = baseUrl + 'opt.png';
   var helpImgUrl = baseUrl + 'help.png';
-  var bgmUrl = baseUrl + 'bgm.wav';
+  var defaultBgmUrl = baseUrl + 'bgm.wav';
+  var autoBgmUrl = baseUrl + 'auto.wav';
   var favConfigPath = baseUrl + 'Fav.json';
 
   // UI
@@ -111,8 +112,11 @@
   var rowIcons = [];
   var rowTexts = [];
   var bgm = null;
+  var bgmGeneration = 0;
   var popupActive = false;
   var viewerActive = false;
+  var imageViewerActive = false;
+  var musicPlayerActive = false;
   var helpActive = false;
   var favMode = false;
   var favReturnState = null;
@@ -144,9 +148,126 @@
   var backgroundImage = null;
   var openingImage = null;
 
+  // Image viewer elements
+  var imageViewerOverlay = null;
+  var imageViewerBg = null;
+  var imageDisplay = null;
+  var imageViewerCloseHint = null;
+
+  // Music player elements and tracking
+  var musicPlayerOverlay = null;
+  var musicPlayerBg = null;
+  var musicPlayerTitle = null;
+  var musicPlayerTimeText = null;
+  var musicPlayerClip = null;
+  var musicPlayerInterval = null;
+  var musicPlayerTotalDuration = 0;
+  var musicPlayerStartTime = 0;
+  var musicPlayerLastPosition = 0;
+
   try { new Style({ name: 'white', color: 'white', size: 28 }); } catch (e) {}
   try { new Style({ name: 'small', color: 'white', size: 22 }); } catch (e) {}
   try { new Style({ name: 'title', color: 'white', size: 34 }); } catch (e) {}
+
+  // Wav Helper
+  function makeBig(lo, hi) {
+    try {
+      if (typeof BigInt === 'function') {
+        return new BigInt(lo, hi);
+      }
+    } catch (e) {}
+    return { lo: lo >>> 0, hi: hi >>> 0 };
+  }
+
+  function isFailBigInt(v) {
+    if (!v) return false;
+    return (typeof v.eq === 'function') && v.eq(makeBig(0xffffffff, 0xffffffff));
+  }
+
+  function writeCString(ptr, str) {
+    for (var i = 0; i < str.length; i++) {
+      mem.view(ptr).setUint8(i, str.charCodeAt(i) & 0xff);
+    }
+    mem.view(ptr).setUint8(str.length, 0);
+  }
+
+  function readFileBytes(path, maxBytes) {
+    var path_addr = mem.malloc(path.length + 1);
+    var buf = mem.malloc(maxBytes);
+    writeCString(path_addr, path);
+
+    var fd = fn.open_sys(path_addr, makeBig(0, 0), makeBig(0, 0));
+    if (isFailBigInt(fd)) return null;
+
+    var read_len = fn.read_sys(fd, buf, makeBig(0, maxBytes));
+    fn.close_sys(fd);
+
+    if (isFailBigInt(read_len)) return null;
+
+    var len = read_len.lo >>> 0;
+    if (!len) return null;
+
+    var bytes = [];
+    for (var j = 0; j < len; j++) {
+      bytes.push(mem.view(buf).getUint8(j));
+    }
+    return bytes;
+  }
+
+  function getWavDuration(path) {
+    var header = readFileBytes(path, 512);
+    if (!header || header.length < 44) return 0;
+
+    if (header[0] !== 0x52 || header[1] !== 0x49 || header[2] !== 0x46 || header[3] !== 0x46) return 0;
+    if (header[8] !== 0x57 || header[9] !== 0x41 || header[10] !== 0x56 || header[11] !== 0x45) return 0;
+
+    var audioFormat = header[20] + (header[21] << 8);
+    if (audioFormat !== 1) return 0;
+
+    var numChannels = header[22] + (header[23] << 8);
+    var sampleRate = header[24] + (header[25] << 8) + (header[26] << 16) + (header[27] << 24);
+    var bitsPerSample = header[34] + (header[35] << 8);
+
+    var offset = 12;
+    var dataSize = 0;
+
+    while (offset + 8 <= header.length) {
+      var chunkId = String.fromCharCode(
+        header[offset],
+        header[offset + 1],
+        header[offset + 2],
+        header[offset + 3]
+      );
+      var chunkSize = header[offset + 4] +
+        (header[offset + 5] << 8) +
+        (header[offset + 6] << 16) +
+        (header[offset + 7] << 24);
+
+      if (chunkId === 'data') {
+        dataSize = chunkSize >>> 0;
+        break;
+      }
+      if (chunkSize <= 0) break;
+      offset += 8 + chunkSize;
+    }
+
+    if (!dataSize || !sampleRate || !numChannels || !bitsPerSample) return 0;
+
+    var bytesPerSec = sampleRate * numChannels * (bitsPerSample / 8);
+    if (!bytesPerSec) return 0;
+
+    return dataSize / bytesPerSec;
+  }
+
+  function fileExists(fsPath) {
+    var addr = strToAddr(toFsPath(fsPath));
+    if (!addr) return false;
+    var fd = fn.open_sys(addr, makeBig(0, 0), makeBig(0, 0));
+    if (isErrorResult(fd)) return false;
+    try { fn.close_sys(fd); } catch(e) {}
+    return true;
+  }
+  //  End Helper Functions 
 
   function strToAddr(s) {
     s = (s === null || typeof s === 'undefined') ? '' : String(s);
@@ -243,6 +364,28 @@
     if (ext === 'mp4' || ext === 'mkv' || ext === 'avi' || ext === 'mov' || ext === 'wmv' || ext === 'flv' || ext === 'webm' || ext === 'ts') return videoIconUrl;
     if (ext === 'wav' || ext === 'mp3' || ext === 'ogg' || ext === 'flac' || ext === 'aac' || ext === 'm4a' || ext === 'wma') return musicIconUrl;
     return fileIconUrl;
+  }
+
+  function isImageFile(item) {
+    if (!item || item.isDir) return false;
+    var ext = (item.name || '').split('.').pop().toLowerCase();
+    return (ext === 'png' || ext === 'jpg' || ext === 'jpeg');
+  }
+
+  function isWavFile(item) {
+    if (!item || item.isDir) return false;
+    var ext = (item.name || '').split('.').pop().toLowerCase();
+    return (ext === 'wav');
+  }
+
+  function toDisplayImageUrl(path) {
+    path = toFsPath(path);
+    return 'file:///..' + path;
+  }
+
+  function toDisplayAudioUrl(path) {
+    path = toFsPath(path);
+    return 'file:///..' + path;
   }
 
   function reliableImageLoad(img, url, label) {
@@ -371,27 +514,252 @@
     arr.length = 0;
   }
 
+  // Improved Audio Lifecycle 
   function stopAudioClip(clip) {
     if (!clip) return;
     try { clip.stop(); } catch (e1) {}
     try { clip.pause(); } catch (e2) {}
-    try { clip.onended = null; } catch (e3) {}
+    try { if (typeof clip.close === 'function') clip.close(); } catch (e3) {}
+    try { clip.onended = null; } catch (e4) {}
   }
 
-  function detachElement(el) {
-    if (!el) return;
-    try { el.visible = false; } catch (e) {}
-    try { el.url = ''; } catch (e2) {}
-    removeElement(el);
+  function safeClearInterval(handle) {
+    if (!handle) return;
+    try { jsmaf.clearInterval(handle); } catch (e1) {}
+    try { clearInterval(handle); } catch (e2) {}
   }
+
+  function safeClearTimeout(handle) {
+    if (!handle) return;
+    try { jsmaf.clearTimeout(handle); } catch (e1) {}
+    try { clearTimeout(handle); } catch (e2) {}
+  }
+
+  function removeTrackedHandle(arr, handle) {
+    if (!arr || !handle) return;
+    for (var i = arr.length - 1; i >= 0; i--) {
+      if (arr[i] === handle) {
+        arr.splice(i, 1);
+        return;
+      }
+    }
+  }
+
+  function stopMainBgm() {
+    bgmGeneration++;
+    stopAudioClip(bgm);
+    bgm = null;
+  }
+
+  function startMainBgm() {
+    stopMainBgm();
+
+    var token = ++bgmGeneration;
+
+    // Determine which BGM URL to use
+    var bgmUrlToUse = defaultBgmUrl;
+    var autoWavFsPath = toFsPath(autoBgmUrl.replace('file:///..', ''));
+    if (fileExists(autoWavFsPath)) {
+      bgmUrlToUse = autoBgmUrl;
+      log('Using auto.wav as main BGM');
+    } else {
+      log('Using default BGM (bgm.wav)');
+    }
+
+    try {
+      bgm = new jsmaf.AudioClip();
+      bgm.open(bgmUrlToUse);
+      bgm.loop = false;
+      bgm.volume = 0.45;
+      bgm.onended = function () {
+        if (token !== bgmGeneration) return;
+        scheduleTimeout(function () {
+          if (token !== bgmGeneration) return;
+          try {
+            if (bgm) {
+              bgm.stop();
+              bgm.play();
+            }
+          } catch (e) {}
+        }, 800);
+      };
+
+      scheduleTimeout(function () {
+        if (token !== bgmGeneration) return;
+        try {
+          if (bgm) bgm.play();
+        } catch (e) {
+          log('BGM play failed: ' + (e.message || e));
+        }
+      }, 25);
+    } catch (e) {
+      log('BGM init failed: ' + (e.message || e));
+    }
+  }
+
+  // Music Player (wav player)  
+  function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    var mins = Math.floor(seconds / 60);
+    var secs = Math.floor(seconds % 60);
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+
+  function updateMusicTime() {
+    if (!musicPlayerActive || !musicPlayerClip) return;
+
+    var now = Date.now();
+    var elapsed = (now - musicPlayerStartTime) / 1000;
+    if (elapsed < 0) elapsed = 0;
+    if (elapsed > musicPlayerTotalDuration) elapsed = musicPlayerTotalDuration;
+
+    musicPlayerLastPosition = elapsed;
+
+    if (musicPlayerTimeText) {
+      musicPlayerTimeText.text = formatTime(elapsed) + ' / ' + formatTime(musicPlayerTotalDuration);
+    }
+
+    if (musicPlayerTotalDuration > 0 && elapsed >= (musicPlayerTotalDuration - 0.15)) {
+      closeMusicPlayer(true);
+    }
+  }
+
+  function openMusicPlayer(item) {
+    if (!item || item.isDir) return;
+
+    closeMusicPlayer(false);
+    stopMainBgm();
+
+    musicPlayerActive = true;
+
+    for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
+    for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
+    for (var k = 0; k < rowIcons.length; k++) if (rowIcons[k]) rowIcons[k].visible = false;
+    for (var l = 0; l < rowTexts.length; l++) if (rowTexts[l]) rowTexts[l].visible = false;
+    if (persistentPathText) persistentPathText.visible = false;
+
+    musicPlayerOverlay = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+    musicPlayerOverlay.alpha = 0.7;
+    musicPlayerOverlay.background = 'black';
+    jsmaf.root.children.push(musicPlayerOverlay);
+
+    var boxW = 800;
+    var boxH = 300;
+    var boxX = (screenWidth - boxW) / 2;
+    var boxY = (screenHeight - boxH) / 2;
+
+    musicPlayerBg = new Image({ url: '', x: boxX, y: boxY, width: boxW, height: boxH });
+    musicPlayerBg.alpha = 0.9;
+    musicPlayerBg.background = '#333';
+    jsmaf.root.children.push(musicPlayerBg);
+
+    var nameWithoutExt = (item.name || '').replace(/\.wav$/i, '');
+
+    musicPlayerTitle = new jsmaf.Text();
+    musicPlayerTitle.text = nameWithoutExt;
+    musicPlayerTitle.x = boxX + boxW / 2;
+    musicPlayerTitle.y = boxY + 100;
+    musicPlayerTitle.style = 'title';
+    musicPlayerTitle.align = 'center';
+    jsmaf.root.children.push(musicPlayerTitle);
+
+    musicPlayerTimeText = new jsmaf.Text();
+    musicPlayerTimeText.text = '0:00 / 0:00';
+    musicPlayerTimeText.x = boxX + boxW / 2;
+    musicPlayerTimeText.y = boxY + 180;
+    musicPlayerTimeText.style = 'small';
+    musicPlayerTimeText.align = 'center';
+    jsmaf.root.children.push(musicPlayerTimeText);
+
+    var audioUrl = toDisplayAudioUrl(item.path);
+    musicPlayerTotalDuration = getWavDuration(toFsPath(item.path));
+    if (!musicPlayerTotalDuration) musicPlayerTotalDuration = 0;
+
+    musicPlayerClip = new jsmaf.AudioClip();
+    try {
+      musicPlayerClip.open(audioUrl);
+      musicPlayerClip.loop = false;
+      musicPlayerClip.volume = 0.7;
+    } catch (e) {
+      showError('Failed to open WAV: ' + (e.message || e));
+      closeMusicPlayer(true);
+      return;
+    }
+
+    musicPlayerStartTime = Date.now();
+    musicPlayerLastPosition = 0;
+
+    if (musicPlayerInterval) {
+      safeClearInterval(musicPlayerInterval);
+      removeTrackedHandle(intervals, musicPlayerInterval);
+      musicPlayerInterval = null;
+    }
+
+    musicPlayerInterval = jsmaf.setInterval(function () {
+      updateMusicTime();
+    }, 200);
+    intervals.push(musicPlayerInterval);
+
+    scheduleTimeout(function () {
+      if (!musicPlayerActive || !musicPlayerClip) return;
+      try {
+        musicPlayerClip.play();
+      } catch (e) {
+        showError('Failed to play WAV: ' + (e.message || e));
+        closeMusicPlayer(true);
+      }
+    }, 35);
+  }
+
+  function closeMusicPlayer(resumeMainBgm) {
+    if (typeof resumeMainBgm === 'undefined') resumeMainBgm = true;
+
+    if (musicPlayerInterval) {
+      safeClearInterval(musicPlayerInterval);
+      removeTrackedHandle(intervals, musicPlayerInterval);
+      musicPlayerInterval = null;
+    }
+
+    if (musicPlayerClip) {
+      stopAudioClip(musicPlayerClip);
+      musicPlayerClip = null;
+    }
+
+    if (musicPlayerOverlay) removeElement(musicPlayerOverlay);
+    if (musicPlayerBg) removeElement(musicPlayerBg);
+    if (musicPlayerTitle) removeElement(musicPlayerTitle);
+    if (musicPlayerTimeText) removeElement(musicPlayerTimeText);
+
+    musicPlayerOverlay = null;
+    musicPlayerBg = null;
+    musicPlayerTitle = null;
+    musicPlayerTimeText = null;
+    musicPlayerTotalDuration = 0;
+    musicPlayerStartTime = 0;
+    musicPlayerLastPosition = 0;
+
+    var wasActive = musicPlayerActive;
+    musicPlayerActive = false;
+
+    if (wasActive) {
+      updateListUI();
+      if (persistentPathText) persistentPathText.visible = true;
+    }
+
+    if (resumeMainBgm) {
+      startMainBgm();
+    }
+  }
+  // End Music Player 
 
   function hardReleaseAllAssets() {
     try { closePopup(); } catch (e1) {}
     try { closeViewer(); } catch (e2) {}
-    try { closeHelpPopup(); } catch (e3) {}
+    try { closeImageViewer(); } catch (e3) {}
+    try { closeMusicPlayer(false); } catch (e4) {}
+    try { closeHelpPopup(); } catch (e5) {}
 
-    stopAudioClip(bgm);
-    bgm = null;
+    stopMainBgm();
 
     detachElement(backgroundImage);
     detachElement(openingImage);
@@ -1299,6 +1667,8 @@
     if (helpActive) { closeHelpPopup(); }
     if (popupActive) closePopup();
     if (viewerActive) closeViewer();
+    if (imageViewerActive) closeImageViewer();
+    if (musicPlayerActive) closeMusicPlayer(true);
 
     if (favMode) exitFavMode();
     currentPath = '/';
@@ -1320,6 +1690,8 @@
     if (helpActive) { closeHelpPopup(); return; }
     if (popupActive) { closePopup(); return; }
     if (viewerActive) { closeViewer(); return; }
+    if (imageViewerActive) { closeImageViewer(); return; }
+    if (musicPlayerActive) { closeMusicPlayer(true); return; }
 
     if (favMode) {
       if (favBrowseActive) {
@@ -1366,6 +1738,8 @@
       if (viewerContent) { viewerScroll += 28; viewerContent.y = 180 + viewerScroll; }
       return;
     }
+    if (imageViewerActive) return;
+    if (musicPlayerActive) return;
     if (popupActive) { popupNavigate(1); return; }
     if (!allItems.length) return;
     if (selectedIndex >= allItems.length - 1) {
@@ -1397,6 +1771,8 @@
       if (viewerContent) { viewerScroll -= 28; viewerContent.y = 180 + viewerScroll; }
       return;
     }
+    if (imageViewerActive) return;
+    if (musicPlayerActive) return;
     if (popupActive) { popupNavigate(-1); return; }
     if (!allItems.length) return;
     if (selectedIndex <= 0) {
@@ -1422,9 +1798,90 @@
     }
   }
 
+  // Image viewer
+  function openImageViewer(item) {
+    if (!item || item.isDir) return;
+    closeImageViewer();
+    imageViewerActive = true;
+
+    for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
+    for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
+    for (var k = 0; k < rowIcons.length; k++) if (rowIcons[k]) rowIcons[k].visible = false;
+    for (var l = 0; l < rowTexts.length; l++) if (rowTexts[l]) rowTexts[l].visible = false;
+    if (persistentPathText) persistentPathText.visible = false;
+
+    var displayUrl = toDisplayImageUrl(item.path);
+
+    imageViewerOverlay = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+    imageViewerOverlay.alpha = 0.7;
+    imageViewerOverlay.background = 'black';
+    jsmaf.root.children.push(imageViewerOverlay);
+
+    imageViewerBg = new Image({ url: '', x: 0, y: 0, width: screenWidth, height: screenHeight });
+    imageViewerBg.alpha = 0.2;
+    imageViewerBg.background = '#222';
+    jsmaf.root.children.push(imageViewerBg);
+
+    var tempImg = new Image();
+    tempImg.onload = function () {
+      try {
+        var origW = tempImg.width || 0;
+        var origH = tempImg.height || 0;
+        if (!origW || !origH) { origW = 1280; origH = 720; }
+        var maxW = screenWidth * 0.9;
+        var maxH = screenHeight * 0.9;
+        var displayW = origW;
+        var displayH = origH;
+        var scale = Math.min(maxW / displayW, maxH / displayH, 1);
+        displayW = displayW * scale;
+        displayH = displayH * scale;
+        var imgX = (screenWidth - displayW) / 2;
+        var imgY = (screenHeight - displayH) / 2;
+        imageDisplay = new Image({ url: displayUrl, x: imgX, y: imgY, width: displayW, height: displayH });
+        imageDisplay.alpha = 1;
+        jsmaf.root.children.push(imageDisplay);
+        imageViewerCloseHint = new jsmaf.Text();
+        imageViewerCloseHint.text = 'Circle to close image';
+        imageViewerCloseHint.x = 40;
+        imageViewerCloseHint.y = screenHeight - 60;
+        imageViewerCloseHint.style = 'small';
+        jsmaf.root.children.push(imageViewerCloseHint);
+      } catch (e) {
+        showError('Failed to open image: ' + (e.message || e));
+        closeImageViewer();
+      }
+    };
+    tempImg.onerror = function () {
+      showError('Failed to load image: ' + item.name);
+      closeImageViewer();
+    };
+    tempImg.url = displayUrl;
+  }
+
+  function closeImageViewer() {
+    if (!imageViewerActive) {
+      if (imageViewerOverlay) removeElement(imageViewerOverlay);
+      if (imageViewerBg) removeElement(imageViewerBg);
+      if (imageDisplay) removeElement(imageDisplay);
+      if (imageViewerCloseHint) removeElement(imageViewerCloseHint);
+      imageViewerOverlay = imageViewerBg = imageDisplay = imageViewerCloseHint = null;
+      return;
+    }
+    imageViewerActive = false;
+    if (imageViewerOverlay) removeElement(imageViewerOverlay);
+    if (imageViewerBg) removeElement(imageViewerBg);
+    if (imageDisplay) removeElement(imageDisplay);
+    if (imageViewerCloseHint) removeElement(imageViewerCloseHint);
+    imageViewerOverlay = imageViewerBg = imageDisplay = imageViewerCloseHint = null;
+    updateListUI();
+    if (persistentPathText) persistentPathText.visible = true;
+  }
+
   function confirmSelection() {
     if (helpActive) return;
     if (viewerActive) return;
+    if (imageViewerActive) return;
+    if (musicPlayerActive) return;
     if (popupActive) { popupConfirm(); return; }
     var item = allItems[selectedIndex];
     if (!item) return;
@@ -1452,7 +1909,9 @@
         refreshDirectoryData();
         refreshPathLabel();
       } else {
-        openTextViewer(item);
+        if (isImageFile(item)) openImageViewer(item);
+        else if (isWavFile(item)) openMusicPlayer(item);
+        else openTextViewer(item);
       }
       return;
     }
@@ -1466,12 +1925,14 @@
       refreshDirectoryData();
       refreshPathLabel();
     } else {
-      openTextViewer(item);
+      if (isImageFile(item)) openImageViewer(item);
+      else if (isWavFile(item)) openMusicPlayer(item);
+      else openTextViewer(item);
     }
   }
 
   function showPopup() {
-    if (viewerActive || popupActive || helpActive) return;
+    if (viewerActive || popupActive || helpActive || imageViewerActive || musicPlayerActive) return;
     popupActive = true;
     for (var i = 0; i < rowBackgrounds.length; i++) if (rowBackgrounds[i]) rowBackgrounds[i].visible = false;
     for (var j = 0; j < rowSelectedBackgrounds.length; j++) if (rowSelectedBackgrounds[j]) rowSelectedBackgrounds[j].visible = false;
@@ -1821,21 +2282,7 @@
   }
 
   function initBgm() {
-    try {
-      bgm = new jsmaf.AudioClip();
-      bgm.open(bgmUrl);
-      bgm.loop = false;
-      bgm.volume = 0.45;
-      bgm.onended = function () {
-        if (!bgm) return;
-        scheduleTimeout(function () {
-          try { if (bgm) { bgm.stop(); bgm.play(); } } catch (e) {}
-        }, 800);
-      };
-      bgm.play();
-    } catch (e) {
-      log('BGM init failed: ' + (e.message || e));
-    }
+    startMainBgm();
   }
 
   jsmaf.onKeyDown = function (keyCode) {
@@ -1860,11 +2307,16 @@
     if (keyCode === 4) { beginNavRepeat(4, navigateUpInList); return; }
     if (keyCode === 6) { beginNavRepeat(6, navigateDown); return; }
 
+    if (keyCode === 13 && musicPlayerActive) {
+      closeMusicPlayer(true);
+      return;
+    }
+
     if (keyCode === 14) confirmSelection();
     else if (keyCode === 13) navigateUp();
-    else if (keyCode === 3 && !popupActive && !viewerActive) showPopup();
-    else if (keyCode === 11 && !popupActive && !viewerActive) toggleSelectCurrent();
-    else if (keyCode === 9 && !popupActive && !viewerActive) toggleSelectAll();
+    else if (keyCode === 3 && !popupActive && !viewerActive && !imageViewerActive && !musicPlayerActive) showPopup();
+    else if (keyCode === 11 && !popupActive && !viewerActive && !imageViewerActive && !musicPlayerActive) toggleSelectCurrent();
+    else if (keyCode === 9 && !popupActive && !viewerActive && !imageViewerActive && !musicPlayerActive) toggleSelectAll();
   };
 
   jsmaf.onKeyUp = function (keyCode) {
