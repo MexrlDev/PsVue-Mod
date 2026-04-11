@@ -1,10 +1,8 @@
-
 """
-iPhone Vue 1.01 Vue Inject + Log python...
+iPhone Vue 1.01 Vue Inject ONLY. python...
 Made by MexrlDev to work on IOS pythonica without MITMPROXY
 Original by Earthonion
 """
-
 
 import os
 import sys
@@ -13,22 +11,18 @@ import threading
 import urllib.request
 import urllib.error
 from pathlib import Path
-from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
 # -------------------- Configuration --------------------
-PROXY_LISTEN_HOST = "0.0.0.0"
-PROXY_LISTEN_PORT = 8080
+LISTEN_HOST = "0.0.0.0"
+LISTEN_PORT = 8080
+LOG_SERVER_URL = "http://127.0.0.1:8082/log"
 
-LOG_LISTEN_HOST = "0.0.0.0"
-LOG_LISTEN_PORT = 8082
-LOG_FILE = Path(__file__).parent / "ps4_logs.txt"
-
-# Hardcoded manifest
+# Hardcoded manifest content (bytes)
 MANIFEST = b'{"app_version":"1.01","override":true,"scripts":[{"src":"inject.js","version":"1.0"}]}'
 
-# -------------------- Blocked Domains --------------------
+# -------------------- Load Blocked Domains --------------------
 BLOCKED = set()
 hosts_path = Path(__file__).parent / "hosts.txt"
 if hosts_path.exists():
@@ -50,9 +44,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
     timeout = 30
 
     def log_message(self, format, *args):
-        pass
+        pass  # Suppress default logs
 
     def do_CONNECT(self):
+        """Handle HTTPS CONNECT - tunnel only, no inspection."""
         host, port = self.path.split(":")
         port = int(port)
 
@@ -75,6 +70,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
             self.send_error(502, "Bad Gateway")
 
     def _tunnel(self, client, remote):
+        """Bidirectional copy."""
         def forward(src, dst):
             try:
                 while True:
@@ -111,14 +107,17 @@ class ProxyHandler(BaseHTTPRequestHandler):
             print(f"[*] Blocked HTTP: {host}{self.path}")
             return
 
+        # Intercept log forwarding
         if "/_log" in self.path:
             self._handle_log()
             return
 
+        # Intercept manifest
         if "manifest.json.aes" in self.path:
             self._serve_manifest()
             return
 
+        # Intercept local .js files
         if self.path.endswith(".js"):
             filename = self.path.split("/")[-1]
             js_path = Path(__file__).parent / filename
@@ -127,25 +126,21 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 print(f"[+] Served local JS: {filename}")
                 return
 
+        # Default: forward request
         self._forward_request()
 
     def _handle_log(self):
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len) if content_len > 0 else b""
         try:
-            decoded = body.decode("utf-8", errors="ignore")
-            print(f"[PROXY] Log: {decoded}")
+            print(f"[PROXY] Log: {body.decode('utf-8', errors='ignore')}")
         except:
             print(f"[PROXY] Log (binary): {len(body)} bytes")
 
-        # Forward to local log server
         try:
-            req = urllib.request.Request(
-                f"http://127.0.0.1:{LOG_LISTEN_PORT}/log",
-                data=body,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
+            req = urllib.request.Request(LOG_SERVER_URL, data=body,
+                                         headers={"Content-Type": "application/json"},
+                                         method="POST")
             urllib.request.urlopen(req, timeout=2)
             print("[PROXY] Forwarded to log server")
         except Exception as e:
@@ -176,18 +171,37 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
     def _forward_request(self):
         host = self.headers.get("Host")
-        url = f"http://{host}{self.path}"
+        if not host:
+            self.send_error(400, "Missing Host header")
+            return
+
+        # Extract hostname without port
+        hostname = host.split(":")[0]
+
+        # Resolve hostname to IP manually (fixes DNS issues on iOS)
+        try:
+            resolved_ip = socket.gethostbyname(hostname)
+        except socket.gaierror as e:
+            print(f"[!] DNS resolution failed for {hostname}: {e}")
+            self.send_error(502, f"DNS resolution failed: {e}")
+            return
+
+        # Build URL using resolved IP, but keep original Host header
+        url = f"http://{resolved_ip}{self.path}"
 
         headers = dict(self.headers)
+        # Remove hop-by-hop headers
         for h in ["Proxy-Connection", "Connection", "Keep-Alive",
                   "Proxy-Authenticate", "Proxy-Authorization",
                   "TE", "Trailer", "Transfer-Encoding", "Upgrade"]:
             headers.pop(h, None)
+        # Ensure the original Host header is sent (some servers require it)
+        headers["Host"] = host
 
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len) if content_len > 0 else None
 
-        print(f"[>] {self.command} {url}")
+        print(f"[>] {self.command} {url} (Host: {host})")
 
         try:
             req = urllib.request.Request(url, data=body, headers=headers, method=self.command)
@@ -214,51 +228,12 @@ class ProxyHandler(BaseHTTPRequestHandler):
             print(f"[!] Forward error: {e}")
             self.send_error(502, f"Gateway Error: {e}")
 
-class ThreadedProxyServer(ThreadingMixIn, HTTPServer):
+# -------------------- Threaded Server --------------------
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
-# -------------------- Log Server Handler --------------------
-class LogHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        if self.path in ('/log', '/_log'):
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode('utf-8', errors='ignore')
-
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            line = f"[{timestamp}] {body}"
-            print(f"[LOG] {line}")
-
-            # Save to file
-            try:
-                with open(LOG_FILE, 'a', encoding='utf-8') as f:
-                    f.write(line + '\n')
-            except Exception as e:
-                print(f"[!] Failed to write log: {e}")
-
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/plain')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(b'ok')
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-
-    def log_message(self, format, *args):
-        pass
-
-class ThreadedLogServer(ThreadingMixIn, HTTPServer):
-    daemon_threads = True
-
-# -------------------- Utility --------------------
 def get_local_ip():
+    """Return the iPhone's Wi-Fi IP address."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect(("8.8.8.8", 80))
@@ -266,46 +241,54 @@ def get_local_ip():
     except:
         return "127.0.0.1"
 
-# -------------------- Main --------------------
-def main():
-    # Start Log Server in background thread
-    log_server = ThreadedLogServer((LOG_LISTEN_HOST, LOG_LISTEN_PORT), LogHandler)
-    log_thread = threading.Thread(target=log_server.serve_forever, daemon=True)
-    log_thread.start()
-    print(f"[+] Log server listening on {LOG_LISTEN_HOST}:{LOG_LISTEN_PORT}")
+def get_all_ips():
+    """Return all non-loopback IPv4 addresses on this device."""
+    ips = []
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None):
+            addr = info[4][0]
+            if addr not in ips and not addr.startswith("127."):
+                ips.append(addr)
+    except:
+        pass
+    return ips
 
-    # Start Proxy Server in main thread (or also background)
-    # Try multiple bind addresses
-    bind_addresses = [PROXY_LISTEN_HOST, "0.0.0.0", get_local_ip(), "127.0.0.1"]
+def main():
+    bind_addresses = [LISTEN_HOST]
+    if LISTEN_HOST != "0.0.0.0":
+        bind_addresses.append("0.0.0.0")
+    bind_addresses.extend([get_local_ip(), "127.0.0.1"])
     bind_addresses = list(dict.fromkeys(bind_addresses))
 
-    proxy_server = None
+    httpd = None
     for addr in bind_addresses:
         try:
-            proxy_server = ThreadedProxyServer((addr, PROXY_LISTEN_PORT), ProxyHandler)
-            print(f"[+] Proxy bound to {addr}:{PROXY_LISTEN_PORT}")
+            server_address = (addr, LISTEN_PORT)
+            httpd = ThreadedHTTPServer(server_address, ProxyHandler)
+            print(f"[+] Proxy bound to {addr}:{LISTEN_PORT}")
             break
         except OSError as e:
-            print(f"[!] Could not bind proxy to {addr}:{PROXY_LISTEN_PORT} - {e}")
+            print(f"[!] Could not bind to {addr}:{LISTEN_PORT} - {e}")
 
-    if proxy_server is None:
-        print("[!] Failed to start proxy. Exiting.")
+    if httpd is None:
+        print("[!] Failed to bind to any address.")
+        print("    Available IP addresses on this device:")
+        for ip in get_all_ips():
+            print(f"      - {ip}")
         sys.exit(1)
 
     client_ip = get_local_ip()
-    print(f"\n[+] All services running!")
-    print(f"[+] Proxy:  http://{client_ip}:{PROXY_LISTEN_PORT}")
-    print(f"[+] Log server: http://{client_ip}:{LOG_LISTEN_PORT}")
-    print(f"[+] Log file: {LOG_FILE}")
-    print(f"\n[+] Configure PS4 / router to use proxy: {client_ip}:{PROXY_LISTEN_PORT}")
+    print(f"\n[+] Proxy running!")
+    print(f"[+] Configure your PS4 / router / device proxy settings to:")
+    print(f"      Proxy Server: {client_ip}")
+    print(f"      Proxy Port:   {LISTEN_PORT}")
     print("[+] Press Ctrl+C to stop.\n")
 
     try:
-        proxy_server.serve_forever()
+        httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n[!] Shutting down...")
-        proxy_server.shutdown()
-        log_server.shutdown()
+        httpd.shutdown()
 
 if __name__ == "__main__":
     main()
