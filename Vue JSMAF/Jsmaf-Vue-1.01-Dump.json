@@ -1,0 +1,1676 @@
+[
+  {
+    "path": "jsmaf.screenAspect",
+    "type": "number",
+    "value": 1.7777777777777777
+  },
+  {
+    "path": "jsmaf.onKeyboardDown",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.hardwareId",
+    "type": "string",
+    "value": "NOOOOOOOOOOOO NOT HERE NOOOO"
+  },
+  {
+    "path": "jsmaf.onEnterFrame",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onshutdown",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.frameRate",
+    "type": "number",
+    "value": 60
+  },
+  {
+    "path": "jsmaf.onenterforeground",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onKeyUp",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onError",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onkeyboarddown",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.depthTest",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.onShutdown",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.screenWidth",
+    "type": "number",
+    "value": 1920
+  },
+  {
+    "path": "jsmaf.onkeyrepeat",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.screenHeight",
+    "type": "number",
+    "value": 1080
+  },
+  {
+    "path": "jsmaf.onkeydown",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.onKeyboardRepeat",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onkeyup",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onKeyboardUp",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onenterframe",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.platform",
+    "type": "string",
+    "value": "ps4"
+  },
+  {
+    "path": "jsmaf.onEnterForeground",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.version",
+    "type": "string",
+    "value": "1.0.123507"
+  },
+  {
+    "path": "jsmaf.circleIsAdvanceButton",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.gamma",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.onenterbackground",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onKeyDown",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.cookie",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "path": "jsmaf.onKeyRepeat",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.networkStatus",
+    "type": "string",
+    "value": "connected"
+  },
+  {
+    "path": "jsmaf.remotePlay",
+    "type": "boolean",
+    "value": true
+  },
+  {
+    "path": "jsmaf.onerror",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onNetworkStatusChange",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.locale",
+    "type": "string",
+    "value": "en"
+  },
+  {
+    "path": "jsmaf.onkeyboardup",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onkeyboardrepeat",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.onnetworkstatuschange",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.scaleZ",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.width",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.rotateZ",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.clipX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.clipHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.y",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.clip",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0.style",
+    "type": "string",
+    "value": "white"
+  },
+  {
+    "path": "jsmaf.root.children.0.width",
+    "type": "number",
+    "value": 800
+  },
+  {
+    "path": "jsmaf.root.children.0.clipHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.y",
+    "type": "number",
+    "value": 510
+  },
+  {
+    "path": "jsmaf.root.children.0.clip",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.0.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.0.children.length",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.length",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.constructor",
+    "type": "function",
+    "name": "Array",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.push",
+    "type": "function",
+    "name": "push",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.shift",
+    "type": "function",
+    "name": "shift",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.splice",
+    "type": "function",
+    "name": "splice",
+    "arity": 2
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.indexOf",
+    "type": "function",
+    "name": "indexOf",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.reduceRight",
+    "type": "function",
+    "name": "reduceRight",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.toLocaleString",
+    "type": "function",
+    "name": "toLocaleString",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.some",
+    "type": "function",
+    "name": "some",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.forEach",
+    "type": "function",
+    "name": "forEach",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.map",
+    "type": "function",
+    "name": "map",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.lastIndexOf",
+    "type": "function",
+    "name": "lastIndexOf",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.toString",
+    "type": "function",
+    "name": "toString",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.sort",
+    "type": "function",
+    "name": "sort",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.join",
+    "type": "function",
+    "name": "join",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.reduce",
+    "type": "function",
+    "name": "reduce",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.slice",
+    "type": "function",
+    "name": "slice",
+    "arity": 2
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.filter",
+    "type": "function",
+    "name": "filter",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.concat",
+    "type": "function",
+    "name": "concat",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.reverse",
+    "type": "function",
+    "name": "reverse",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.pop",
+    "type": "function",
+    "name": "pop",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.every",
+    "type": "function",
+    "name": "every",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.children.__proto__.unshift",
+    "type": "function",
+    "name": "unshift",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.clipY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.text",
+    "type": "string",
+    "value": "Press X (⨉) to dump jsmaf"
+  },
+  {
+    "path": "jsmaf.root.children.0.borderImage",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "path": "jsmaf.root.children.0.borderWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.borderColor",
+    "type": "string",
+    "value": "rbg(0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.0.z",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.baseline",
+    "type": "number",
+    "value": 20
+  },
+  {
+    "path": "jsmaf.root.children.0.rotateY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.scaleY",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.clipWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.naturalHeight",
+    "type": "number",
+    "value": 33
+  },
+  {
+    "path": "jsmaf.root.children.0.rotateX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.scaleX",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.align",
+    "type": "string",
+    "value": "left"
+  },
+  {
+    "path": "jsmaf.root.children.0.lineCount",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.scaleZ",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.tint",
+    "type": "string",
+    "value": "rbg(255,255,255)"
+  },
+  {
+    "path": "jsmaf.root.children.0.rotateZ",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.clipX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingBottom",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.alpha",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.0.x",
+    "type": "number",
+    "value": 780
+  },
+  {
+    "path": "jsmaf.root.children.0.naturalWidth",
+    "type": "number",
+    "value": 273
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingRight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.background",
+    "type": "string",
+    "value": "rgba(0,0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.0.visible",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.0.lineClamp",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.height",
+    "type": "number",
+    "value": 40
+  },
+  {
+    "path": "jsmaf.root.children.0.onload",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingLeft",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.0.onLoad",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.0.paddingTop",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.1.style",
+    "type": "string",
+    "value": "white"
+  },
+  {
+    "path": "jsmaf.root.children.1.width",
+    "type": "number",
+    "value": 800
+  },
+  {
+    "path": "jsmaf.root.children.1.clipHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.y",
+    "type": "number",
+    "value": 570
+  },
+  {
+    "path": "jsmaf.root.children.1.clip",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.1.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.1.children.length",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.children.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.1.clipY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.text",
+    "type": "string",
+    "value": "Press O (O) to restart"
+  },
+  {
+    "path": "jsmaf.root.children.1.borderImage",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "path": "jsmaf.root.children.1.borderWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.borderColor",
+    "type": "string",
+    "value": "rbg(0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.1.z",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.baseline",
+    "type": "number",
+    "value": 20
+  },
+  {
+    "path": "jsmaf.root.children.1.rotateY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.scaleY",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.1.clipWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.naturalHeight",
+    "type": "number",
+    "value": 33
+  },
+  {
+    "path": "jsmaf.root.children.1.rotateX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.scaleX",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.1.align",
+    "type": "string",
+    "value": "left"
+  },
+  {
+    "path": "jsmaf.root.children.1.lineCount",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.1.scaleZ",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.1.tint",
+    "type": "string",
+    "value": "rbg(255,255,255)"
+  },
+  {
+    "path": "jsmaf.root.children.1.rotateZ",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.clipX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingBottom",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.alpha",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.1.x",
+    "type": "number",
+    "value": 780
+  },
+  {
+    "path": "jsmaf.root.children.1.naturalWidth",
+    "type": "number",
+    "value": 238
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingRight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.background",
+    "type": "string",
+    "value": "rgba(0,0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.1.visible",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.1.lineClamp",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.height",
+    "type": "number",
+    "value": 40
+  },
+  {
+    "path": "jsmaf.root.children.1.onload",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingLeft",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.onLoad",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.1.paddingTop",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.1.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.2",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.2.style",
+    "type": "string",
+    "value": "small"
+  },
+  {
+    "path": "jsmaf.root.children.2.width",
+    "type": "number",
+    "value": 800
+  },
+  {
+    "path": "jsmaf.root.children.2.clipHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.y",
+    "type": "number",
+    "value": 1040
+  },
+  {
+    "path": "jsmaf.root.children.2.clip",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.2.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.2.children.length",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.children.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.2.clipY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.text",
+    "type": "string",
+    "value": "Dump path: file:///../download0/jsmaf_dump.json"
+  },
+  {
+    "path": "jsmaf.root.children.2.borderImage",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "path": "jsmaf.root.children.2.borderWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.borderColor",
+    "type": "string",
+    "value": "rbg(0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.2.z",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.baseline",
+    "type": "number",
+    "value": 13
+  },
+  {
+    "path": "jsmaf.root.children.2.rotateY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.scaleY",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.2.clipWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.naturalHeight",
+    "type": "number",
+    "value": 21
+  },
+  {
+    "path": "jsmaf.root.children.2.rotateX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.scaleX",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.2.align",
+    "type": "string",
+    "value": "left"
+  },
+  {
+    "path": "jsmaf.root.children.2.lineCount",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.2.scaleZ",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.2.tint",
+    "type": "string",
+    "value": "rbg(255,255,255)"
+  },
+  {
+    "path": "jsmaf.root.children.2.rotateZ",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.clipX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingBottom",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.alpha",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.2.x",
+    "type": "number",
+    "value": 20
+  },
+  {
+    "path": "jsmaf.root.children.2.naturalWidth",
+    "type": "number",
+    "value": 345
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingRight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.background",
+    "type": "string",
+    "value": "rgba(0,0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.2.visible",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.2.lineClamp",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.height",
+    "type": "number",
+    "value": 40
+  },
+  {
+    "path": "jsmaf.root.children.2.onload",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingLeft",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.onLoad",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.2.paddingTop",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.2.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.3",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.3.style",
+    "type": "string",
+    "value": "yellow"
+  },
+  {
+    "path": "jsmaf.root.children.3.width",
+    "type": "number",
+    "value": 800
+  },
+  {
+    "path": "jsmaf.root.children.3.clipHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.y",
+    "type": "number",
+    "value": 540
+  },
+  {
+    "path": "jsmaf.root.children.3.clip",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.root.children.3.children",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.root.children.3.children.length",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.children.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.3.clipY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.text",
+    "type": "string",
+    "value": "Dumping jsmaf object..."
+  },
+  {
+    "path": "jsmaf.root.children.3.borderImage",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "path": "jsmaf.root.children.3.borderWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.borderColor",
+    "type": "string",
+    "value": "rbg(0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.3.z",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.baseline",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.rotateY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.scaleY",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.clipWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.naturalHeight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.rotateX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.scaleX",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.align",
+    "type": "string",
+    "value": "left"
+  },
+  {
+    "path": "jsmaf.root.children.3.lineCount",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.scaleZ",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.tint",
+    "type": "string",
+    "value": "rbg(255,255,255)"
+  },
+  {
+    "path": "jsmaf.root.children.3.rotateZ",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.clipX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingBottom",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.alpha",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.children.3.x",
+    "type": "number",
+    "value": 20
+  },
+  {
+    "path": "jsmaf.root.children.3.naturalWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingRight",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.background",
+    "type": "string",
+    "value": "rgba(0,0,0,0)"
+  },
+  {
+    "path": "jsmaf.root.children.3.visible",
+    "type": "boolean",
+    "value": true
+  },
+  {
+    "path": "jsmaf.root.children.3.lineClamp",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.height",
+    "type": "number",
+    "value": 40
+  },
+  {
+    "path": "jsmaf.root.children.3.onload",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingLeft",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.onLoad",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.root.children.3.paddingTop",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.children.3.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.children.length",
+    "type": "number",
+    "value": 4
+  },
+  {
+    "path": "jsmaf.root.children.__proto__",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.root.x",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.alpha",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.visible",
+    "type": "boolean",
+    "value": true
+  },
+  {
+    "path": "jsmaf.root.z",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.height",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.rotateY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.scaleX",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.scaleY",
+    "type": "number",
+    "value": 1
+  },
+  {
+    "path": "jsmaf.root.clipWidth",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.rotateX",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.root.clipY",
+    "type": "number",
+    "value": 0
+  },
+  {
+    "path": "jsmaf.connectionType",
+    "type": "string",
+    "value": "wireless"
+  },
+  {
+    "path": "jsmaf.onEnterBackground",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.Container",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Container.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Container.prototype.constructor",
+    "type": "function",
+    "name": "Object",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.Container.prototype.hasOwnProperty",
+    "type": "function",
+    "name": "hasOwnProperty",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.Container.prototype.__defineSetter__",
+    "type": "function",
+    "name": "__defineSetter__",
+    "arity": 2
+  },
+  {
+    "path": "jsmaf.Container.prototype.valueOf",
+    "type": "function",
+    "name": "valueOf",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.Container.prototype.__lookupGetter__",
+    "type": "function",
+    "name": "__lookupGetter__",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.Container.prototype.toLocaleString",
+    "type": "function",
+    "name": "toLocaleString",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.Container.prototype.__defineGetter__",
+    "type": "function",
+    "name": "__defineGetter__",
+    "arity": 2
+  },
+  {
+    "path": "jsmaf.Container.prototype.propertyIsEnumerable",
+    "type": "function",
+    "name": "propertyIsEnumerable",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.Container.prototype.toString",
+    "type": "function",
+    "name": "toString",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.Container.prototype.__lookupSetter__",
+    "type": "function",
+    "name": "__lookupSetter__",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.Container.prototype.isPrototypeOf",
+    "type": "function",
+    "name": "isPrototypeOf",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.Image",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Image.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Image.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Mesh",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Mesh.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Mesh.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Slate",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Slate.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Slate.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Text",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Text.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Text.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Style",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Style.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Style.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.Video",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Video.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.Video.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.WebSocket",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocket.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocket.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.WebSocketServer",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocketServer.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.WebSocketServer.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.User",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.User.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.User.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.XMLHttpRequest",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.XMLHttpRequest.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.XMLHttpRequest.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.AudioClip",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.AudioClip.prototype",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.AudioClip.prototype",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.location",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.location.requiresPsn",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.location.debugScripts",
+    "type": "boolean",
+    "value": true
+  },
+  {
+    "path": "jsmaf.location.mIsSetUp",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "path": "jsmaf.location.mOnEnterFrameFunc",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.mOnErrorFunc",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.location.mOnNetworkStatusChangeFunc",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.location.mOnUserStatusChangeFunc",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.mHandlerChain",
+    "type": "null",
+    "value": null
+  },
+  {
+    "path": "jsmaf.location.mLocation",
+    "type": "string",
+    "value": "http://s3.amazonaws.com/cobra-prod-a/manifest.json.aes"
+  },
+  {
+    "path": "jsmaf.location.__proto__.constructor",
+    "type": "function",
+    "name": "a",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.initJSMAFLocation",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.setUp",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.tearDown",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.onEnterFrame",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.onNetworkStatusChange",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.location.__proto__.onError",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.onUserStatusChange",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.location.__proto__.initChain",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.isSetUp",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.restart",
+    "type": "function",
+    "name": "",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.location.__proto__.sendRequest",
+    "type": "function",
+    "name": "",
+    "arity": 1
+  },
+  {
+    "path": "jsmaf.LocationObj",
+    "type": "object"
+  },
+  {
+    "path": "jsmaf.LocationObj",
+    "type": "circular"
+  },
+  {
+    "path": "jsmaf.__proto__.forceConnect",
+    "type": "function",
+    "name": "forceConnect",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.clearTimeout",
+    "type": "function",
+    "name": "clearTimeout",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.gc",
+    "type": "function",
+    "name": "gc",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.setTimeout",
+    "type": "function",
+    "name": "setTimeout",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.forceShutdown",
+    "type": "function",
+    "name": "forceShutdown",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.print",
+    "type": "function",
+    "name": "print",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.include",
+    "type": "function",
+    "name": "include",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.clearInterval",
+    "type": "function",
+    "name": "clearInterval",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.openWebBrowser",
+    "type": "function",
+    "name": "openWebBrowser",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.showOSK",
+    "type": "function",
+    "name": "showOSK",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.eval",
+    "type": "function",
+    "name": "eval",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.setInterval",
+    "type": "function",
+    "name": "setInterval",
+    "arity": 0
+  },
+  {
+    "path": "jsmaf.__proto__.alert",
+    "type": "function",
+    "name": "alert",
+    "arity": 0
+  }
+]
