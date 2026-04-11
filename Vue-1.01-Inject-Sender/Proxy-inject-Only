@@ -16,7 +16,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
 # -------------------- Configuration --------------------
-# IMPORTANT: Set this to "0.0.0.0" (recommended) OR your iPhone's actual Wi‑Fi IP
+# IMPORTANT: Set this to "0.0.0.0"
 LISTEN_HOST = "0.0.0.0"
 LISTEN_PORT = 8080
 LOG_SERVER_URL = "http://127.0.0.1:8082/log"
