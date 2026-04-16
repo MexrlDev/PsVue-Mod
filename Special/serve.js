@@ -1,5 +1,5 @@
 // Remote loader - downloads and evals inject.js from WebSocketServer
-// For Vue 2.0 = thanks to Stand Videi for the healthy sampol
+// For Vue 2.0 = thanks to Stand Video for the healthy sampol
 var WS_PORT = 40404;
 
 var fs = {
