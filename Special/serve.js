@@ -1,0 +1,344 @@
+// Remote loader - downloads and evals inject.js from WebSocketServer
+// For Vue 2.0 = thanks to Stand Videi for the healthy sampol
+var WS_PORT = 40404;
+
+var fs = {
+    write: function(filename, content, callback) {
+        var xhr = new jsmaf.XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && callback) {
+                callback(xhr.status === 0 || xhr.status === 200 ? null : new Error("failed"));
+            }
+        };
+        xhr.open("POST", "file://../download0/" + filename, true);
+        xhr.send(content);
+    },
+    
+    read: function(filename, callback) {
+        var xhr = new jsmaf.XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && callback) {
+                callback(xhr.status === 0 || xhr.status === 200 ? null : new Error("failed"), xhr.responseText);
+            }
+        };
+        xhr.open("GET", "file://../download0/" + filename, true);
+        xhr.send();
+    },
+    
+    delete: function(filename, callback) {
+        var xhr = new jsmaf.XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && callback) {
+                callback(xhr.status === 0 || xhr.status === 200 ? null : new Error("failed"));
+            }
+        };
+        xhr.open("DELETE", "file://../download0/" + filename, true);
+        xhr.send();
+    }
+};
+
+// Shared BGM helpers (single instance across screens)
+var bgmClip = null;
+function stopBgm () {
+    if (bgmClip) {
+        try {
+            if (typeof bgmClip.stop === 'function') {
+                bgmClip.stop();
+            }
+            if (typeof bgmClip.close === 'function') {
+                bgmClip.close();
+            }
+        } catch (e) {
+            log('ERROR stopping BGM: ' + (e && e.message ? e.message : e));
+        }
+        bgmClip = null;
+    }
+}
+
+function startBgmIfEnabled () {
+    var clip = null;
+    try {
+        if (typeof CONFIG !== 'undefined' && CONFIG.music === false) {
+            stopBgm();
+            return;
+        }
+
+        if (typeof CONFIG !== 'undefined' && CONFIG.music && !bgmClip) {
+            clip = new jsmaf.AudioClip();
+            clip.volume = 0.5;
+            clip.open('file://../download0/sfx/bgm.wav');
+            bgmClip = clip;
+        }
+    } catch (e) {
+        log('ERROR starting BGM: ' + (e && e.message ? e.message : e));
+        try {
+            if (clip && typeof clip.close === 'function') {
+                clip.close();
+            }
+        } catch (closeErr) {
+            log('ERROR closing failed BGM clip: ' + (closeErr && closeErr.message ? closeErr.message : closeErr));
+        }
+        stopBgm();
+    }
+}
+
+
+try {
+    //allow remoteplay
+    jsmaf.remotePlay = true 
+    
+    
+    // start WebSocket server listening to PS4_IP:WS_PORT 
+    ws = new jsmaf.WebSocketServer();
+    ws.port = WS_PORT;
+
+        
+    jsmaf.root.children.length = 0;
+    
+    
+    var bg_home = new Image({
+        url: "file:///../download0/img/multiview_bg_VAF.png",
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080
+    });
+    jsmaf.root.children.push(bg_home);
+    
+    var logo = new Image({
+        url: "file:///../download0/img/logo.png",
+        x: jsmaf.screenWidth/3.5,
+        y: 220,
+        width: 800,
+        height: 500
+    });
+    jsmaf.root.children.push(logo);
+    
+
+    
+    jsmaf.onKeyDown = function(keyCode) {
+        //1 = l3
+        //2 = r3
+        //3 = options
+        //4 = up
+        //5 = right
+        //6 = down
+        //7 = left
+        //8 + 53= l2
+        //9 + 54= r2
+        //12 = triangle
+        //13 = circle
+        //14 = cross
+        //15 = square
+        //11 = r1
+        //10 = r2
+        //16 = touchpad click
+        //55 = left stick up
+        //56 = left stick right
+        //57 = left stick down
+        //58 = left stick left
+        //59 = right stick up
+        //60 = right stick right
+        //61 = right stick down
+        //62 = right stick left
+
+        //cross pressed
+        if (keyCode === 14) {
+            if(!jsmaf.circleIsAdvanceButton) {
+                include('loader.js')
+            }
+        }
+        //circle pressed
+        else if (keyCode === 13) {
+            if(jsmaf.circleIsAdvanceButton) {
+                include('loader.js')
+            }
+        }
+        //triangle
+        else if (keyCode === 12) {
+            try {
+                var t = (typeof CONFIG !== 'undefined' && CONFIG.theme) ? CONFIG.theme : 'default';
+                include('themes/' + t + '/payload_host.js');
+            } catch(e) {
+                log('Theme payload_host failed, falling back to default: ' + e.message);
+                include('themes/default/payload_host.js');
+            }
+        }
+        
+    }
+    
+    
+    
+    // Random image selection for success/fail screens
+    var successImageCount = 50;
+    var failImageCount = 60;
+    var randomSuccessNum = Math.floor(Math.random() * successImageCount) + 1;
+    var randomFailNum = Math.floor(Math.random() * failImageCount) + 1;
+
+    var bg_success = new Image({
+        url: "file:///../download0/img/susec/" + randomSuccessNum + ".jpg",
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080
+    });
+
+    // Background
+    var bg_fail = new Image({
+        url: "file:///../download0/img/feil/" + randomFailNum + ".jpg",
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080
+    });
+    
+
+
+   
+   
+
+
+    // Create text objects for each line
+    var maxLines = 38;
+    var logTextLines = [];
+
+    var rainbowColors = [
+        "#FF6B6B",
+        "#FFA94D",
+        "#FFD93D",
+        "#6BCF7F",
+        "#4DABF7",
+        "#9775FA",
+        "#DA77F2"
+    ];
+
+    for (var i = 0; i < maxLines; i++) {
+        var lineText = new jsmaf.Text();
+        lineText.text = "";
+        lineText.background = rainbowColors[i % rainbowColors.length];
+        lineText.x = 20;
+        lineText.y = 120 + (i * 20);
+        jsmaf.root.children.push(lineText);
+        logTextLines.push(lineText);
+    }
+
+    var logBuffer = [];
+
+    // Replace global log() to show on screen
+    _log = function(msg, screen) {
+        if (screen) {
+            logBuffer.push(msg);
+            if (logBuffer.length > maxLines) {
+                logBuffer.shift();
+            }
+
+            // Update each line's text
+            for (var i = 0; i < maxLines; i++) {
+                if (i < logBuffer.length) {
+                    logTextLines[i].text = logBuffer[i];
+                } else {
+                    logTextLines[i].text = "";
+                }
+            }
+        }
+
+        ws.broadcast(msg); // Still send to websocket too
+    }
+    log = function(msg) {
+        _log(`[+] ${msg}`, true)
+    }
+    debug = function(msg) {
+        _log(`[*] ${msg}`, false)
+    }
+    error = function(msg) {
+        _log(`[-] ${msg}`, true)
+    }
+    
+    
+    // Global CONFIG variable
+    var CONFIG = null;
+    var payloads = [];
+    
+    var needsConfig = false;
+    
+    // Try to load config.json
+    fs.read('config.json', function(err, data) {
+        if (err) {
+            log('config.json not found! creating default config');
+            needsConfig = true;
+        } else {
+            try {
+                var configData = JSON.parse(data);
+                CONFIG = configData.config || {};
+                payloads = configData.payloads || [];
+                log('Config loaded successfully');
+            } catch(e) {
+                log('ERROR parsing config.json: ' + e.message);
+                needsConfig = true;
+            }
+        }
+
+        // Create default config if needed
+        if (needsConfig) {
+            var defaultConfig = {
+                config: {
+                    autolapse: false,
+                    autopoop: false,
+                    autoclose: false,
+                    autoclose_delay: 3000,
+                    music: true,
+                    jb_behavior: 0,
+                    theme: 'default'
+                },
+                payloads: []
+            };
+            
+            CONFIG = defaultConfig.config;
+            payloads = defaultConfig.payloads;
+            
+            fs.write("config.json", JSON.stringify(defaultConfig, null, 2), function(err) {
+                if (!err) {
+                    log("config.json created");
+                } else {
+                    log("ERROR creating config.json: " + err.message);
+                }
+            });
+        }
+
+        if(CONFIG.autolapse){
+            include('loader.js')
+        } else if(CONFIG.autopoop){
+            CONFIG.jb_behavior = 1
+            include('loader.js')
+        } 
+        else {
+            var themeName = CONFIG.theme || 'default';
+            try {
+                include('themes/' + themeName + '/main.js');
+            } catch(e) {
+                log('Failed to load theme "' + themeName + '": ' + e.message);
+                log('Falling back to default theme');
+                include('themes/default/main.js');
+            }
+        }
+    });
+    
+    // handle WebSocket received messages
+    ws.onmessage = function(c, e) {
+        if (e.data.length === 1 && e.data[0].constructor.name === "String") {
+            try {
+                jsmaf.eval(e.data[0]);
+            } catch(err) {
+                error(err.message);
+                for (var i of err.stack.split('\n')) {
+                    error(i);
+                }
+            }
+        } else {
+            error("Failed to receive valid message !!")
+        }
+    };
+} catch(e) {
+    alert(`${e.message}\n${e.stack}`);
+    //var i = 0;
+}
