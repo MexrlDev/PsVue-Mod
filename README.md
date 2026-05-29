@@ -7,7 +7,11 @@
 > It has become stable and easy now, after the last couple themes i made and shared, its of course the best time to start using themes on yoir vue to enjoy this wondeful word of themes and exploring.
 
 ---
+## The End Of Project
 
+* This project has been discontinued but will stay free and for everone. date 29/05/2026
+
+---
 ## Exploring 
 
 * I do researches on vue as well, to find new things we can use, and find things we never thought of. as today i made the first game for Vue, which was flappy bird. and it was a very surprising success.
