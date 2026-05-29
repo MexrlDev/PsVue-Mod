@@ -9,7 +9,8 @@
 ---
 ## The End Of Project
 
-* This project has been discontinued but will stay free and for everone. date 29/05/2026
+* This project has been discontinued but will stay free and for everone.
+* date 29/05/2026
 
 ---
 ## Exploring 
