@@ -84,12 +84,6 @@ This project is just made for fun by me but grew fast.
 
 ---
 
-## Socials
-
-[![X](https://img.shields.io/badge/@Mexrl-black?style=for-the-badge&logo=x&logoColor=black&labelColor=white)](https://x.com/Mexrl)
-
----
-
 # Controls
 
 same as normal vue BUT with file explorer. when viewing JS to go down or up gotta use R3-L3 to move up or doen the script.. 
